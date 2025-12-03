@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+.input-box{
+    border-radius: 10px;
+    border: 1px solid black;
+    width: 100%;
+    padding:  10px;
+    outline: 0;
+}
+.dark .input-box{
+    border: 1px solid rgba(255, 255, 255, 0.4);
+}
+/* All icon color  */
+.iconColor{
+    @apply text-black dark:text-white
+}
+@keyframes bell-dancing {
+    0% { transform: rotate(0deg);}
+    25% {transform: rotate(10deg);}
+    50%{transform: rotate(0deg);}
+    75% {transform: rotate(-10deg);}
+    100%{transform: rotate(0deg);}
+}
+.bell-dancing{
+    animation: bell-dancing 1s ease-in-out infinite;
+    transform-origin: center;
+    display: inline-block;
+}
