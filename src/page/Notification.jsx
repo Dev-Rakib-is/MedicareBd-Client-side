@@ -6,13 +6,18 @@ const Notification = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // fetch notifications
+  // Fetch notifications
   const fetchNotifications = async () => {
     try {
+      setLoading(true);
       const res = await api.get("/notifications");
-      setNotifications(res.data.notifications);
+
+      // Optional chaining and fallback to empty array
+      setNotifications(res.data?.notifications || []);
     } catch (err) {
+      console.error("Fetch notifications error:", err);
       setError("Failed to load notifications");
+      setNotifications([]); 
     } finally {
       setLoading(false);
     }
@@ -27,12 +32,10 @@ const Notification = () => {
     try {
       await api.patch(`/notifications/${id}/read`);
       setNotifications((prev) =>
-        prev.map((n) =>
-          n._id === id ? { ...n, isRead: true } : n
-        )
+        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
       );
     } catch (err) {
-      console.log(err);
+      console.error("Mark as read error:", err);
     }
   };
 

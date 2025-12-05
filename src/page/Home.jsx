@@ -8,7 +8,6 @@ const Home = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Banner slider
   const banners = [
     {
       title: "Your Health, Our Priority",
@@ -32,25 +31,35 @@ const Home = () => {
 
   const [current, setCurrent] = useState(0);
 
-  // Data states
   const [doctors, setDoctors] = useState([]);
   const [specializations, setSpecializations] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingDoctors, setLoadingDoctors] = useState(true);
 
-  // Fetch all data
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [docRes, specRes, apptRes, prescRes, reportRes] = await Promise.all([
-          api.get("/doctors"),
-          api.get("/specializations"),
-          user ? api.get("/appointments/patient") : Promise.resolve({ data: { data: [] } }),
-          user ? api.get("/prescriptions") : Promise.resolve({ data: { data: [] } }),
-          user ? api.get("/reports") : Promise.resolve({ data: { data: [] } }),
-        ]);
+        setLoadingDoctors(true);
+
+        const patientId = user?._id; // user থেকে patientId নিয়ে নিলাম
+
+        const [docRes, specRes, apptRes, prescRes, reportRes] =
+          await Promise.all([
+            api.get("/doctors"),
+            api.get("/specializations"),
+            user
+              ? api.get("/appointments/patient")
+              : Promise.resolve({ data: { data: [] } }),
+            user
+              ? api.get(`/prescriptions/${patientId}`)
+              : Promise.resolve({ data: { data: [] } }),
+            user
+              ? api.get(`/reports/${patientId}`)
+              : Promise.resolve({ data: { data: [] } }),
+          ]);
 
         setDoctors(docRes.data?.doctors || []);
         setSpecializations(specRes.data?.specializations || []);
@@ -61,13 +70,13 @@ const Home = () => {
         console.error("Fetch error:", err);
       } finally {
         setLoading(false);
+        setLoadingDoctors(false);
       }
     };
 
     fetchData();
   }, [user]);
 
-  // Banner slider interval
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrent((prev) => (prev === banners.length - 1 ? 0 : prev + 1));
@@ -95,7 +104,9 @@ const Home = () => {
       >
         <div className="absolute inset-0 bg-black/25 rounded"></div>
         <div className="z-10 text-white max-w-2xl">
-          <h1 className="text-3xl md:text-5xl font-bold">{banners[current].title}</h1>
+          <h1 className="text-3xl md:text-5xl font-bold">
+            {banners[current].title}
+          </h1>
           <p className="my-4 text-lg md:text-xl">{banners[current].subtitle}</p>
           <button
             onClick={handleButton}
@@ -108,86 +119,79 @@ const Home = () => {
 
       {/* Sections Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {user && (
+          <section className="bg-white dark:bg-gray-800 p-4 rounded shadow">
+            <h2 className="text-xl font-bold mb-2">Upcoming Appointments</h2>
+            {appointments.length === 0 ? (
+              <p>No upcoming appointments.</p>
+            ) : (
+              <ul className="space-y-2">
+                {appointments.slice(0, 3).map((appt) => (
+                  <li key={appt._id} className="border-b py-1">
+                    <p>
+                      <strong>{appt.doctor?.name || appt.doctorId?.name}</strong>
+                    </p>
+                    <p>{new Date(appt.date).toLocaleString()}</p>
+                    <p>Status: {appt.status}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
-        {/* Upcoming Appointments */}
-        <section className="bg-white dark:bg-gray-800 p-4 rounded shadow">
-          <h2 className="text-xl font-bold mb-2">Upcoming Appointments</h2>
-          {appointments.length === 0 ? (
-            <p>No upcoming appointments.</p>
-          ) : (
-            <ul className="space-y-2">
-              {appointments.slice(0, 3).map((appt) => (
-                <li key={appt._id} className="border-b py-1">
-                  <p><strong>{appt.doctor.name || appt.doctorId?.name}</strong></p>
-                  <p>{new Date(appt.date).toLocaleString()}</p>
-                  <p>Status: {appt.status}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        {user && (
+          <section className="bg-white dark:bg-gray-800 p-4 rounded shadow">
+            <h2 className="text-xl font-bold mb-2">Recent Prescriptions</h2>
+            {prescriptions.length === 0 ? (
+              <p>No prescriptions yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {prescriptions.slice(0, 3).map((p) => (
+                  <li key={p._id} className="border-b py-1">
+                    <p>{p.medications.map((m) => m.name).join(", ")}</p>
+                    <p>By: {p.doctor?.name || p.doctorId?.name}</p>
+                    <p>{new Date(p.date).toLocaleDateString()}</p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
 
-        {/* Recent Prescriptions */}
-        <section className="bg-white dark:bg-gray-800 p-4 rounded shadow">
-          <h2 className="text-xl font-bold mb-2">Recent Prescriptions</h2>
-          {prescriptions.length === 0 ? (
-            <p>No prescriptions yet.</p>
-          ) : (
-            <ul className="space-y-2">
-              {prescriptions.slice(0, 3).map((p) => (
-                <li key={p._id} className="border-b py-1">
-                  <p>{p.medications.map((m) => m.name).join(", ")}</p>
-                  <p>By: {p.doctor.name || p.doctorId?.name}</p>
-                  <p>{new Date(p.date).toLocaleDateString()}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        {user && (
+          <section className="bg-white dark:bg-gray-800 p-4 rounded shadow">
+            <h2 className="text-xl font-bold mb-2">Recent Reports</h2>
+            {reports.length === 0 ? (
+              <p>No reports found.</p>
+            ) : (
+              <ul className="space-y-2">
+                {reports.slice(0, 3).map((r) => (
+                  <li key={r._id} className="border-b py-1">
+                    <p>{r.title}</p>
+                    <p>{new Date(r.date).toLocaleDateString()}</p>
+                    <a
+                      href={r.file_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-600 underline"
+                    >
+                      Download
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        )}
+      </div>
 
-        {/* Recent Reports */}
-        <section className="bg-white dark:bg-gray-800 p-4 rounded shadow">
-          <h2 className="text-xl font-bold mb-2">Recent Reports</h2>
-          {reports.length === 0 ? (
-            <p>No reports found.</p>
-          ) : (
-            <ul className="space-y-2">
-              {reports.slice(0, 3).map((r) => (
-                <li key={r._id} className="border-b py-1">
-                  <p>{r.title}</p>
-                  <p>{new Date(r.date).toLocaleDateString()}</p>
-                  <a
-                    href={r.file_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-blue-600 underline"
-                  >
-                    Download
-                  </a>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {/* Popular Specializations */}
-        <section className="bg-white dark:bg-gray-800 p-4 rounded shadow">
-          <h2 className="text-xl font-bold mb-2">Popular Specializations</h2>
-          <div className="flex flex-wrap gap-2">
-            {specializations.map((sp) => (
-              <span
-                key={sp._id}
-                className="bg-blue-200 dark:bg-blue-900 px-2 py-1 rounded text-sm"
-              >
-                {sp.name}
-              </span>
-            ))}
-          </div>
-        </section>
-
-        {/* Top Doctors */}
-        <section className="bg-white dark:bg-gray-800 p-4 rounded shadow">
-          <h2 className="text-xl font-bold mb-2">Our Doctors</h2>
+      {/* Top Doctors */}
+      <section className="bg-white dark:bg-gray-800 p-4 rounded shadow">
+        <h2 className="text-xl font-bold mb-2 text-center">Our Doctors</h2>
+        {loadingDoctors ? (
+          <p>Loading doctors ...</p>
+        ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {doctors.slice(0, 4).map((doc) => (
               <div key={doc._id} className="flex items-center gap-2 border-b py-1">
@@ -205,9 +209,23 @@ const Home = () => {
               </div>
             ))}
           </div>
-        </section>
+        )}
+      </section>
 
-      </div>
+      {/* Popular Specializations */}
+      <section className="bg-white dark:bg-gray-800 p-4 rounded shadow">
+        <h2 className="text-xl font-bold mb-2 text-center">Popular Specializations</h2>
+        <div className="flex flex-wrap gap-2">
+          {specializations.map((sp) => (
+            <span
+              key={sp._id}
+              className="bg-blue-200 dark:bg-blue-900 px-2 py-1 rounded text-sm"
+            >
+              {sp.name}
+            </span>
+          ))}
+        </div>
+      </section>
     </div>
   );
 };

@@ -1,336 +1,237 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../../api/api"; 
+import { X } from "lucide-react"; 
+const STATUS_OPTIONS = ["All", "Pending", "Accepted", "Approved", "Completed", "Cancelled", "Rejected"];
 
-const mockDoctors = [
-  {
-    id: "d1",
-    name: "Dr. Ayesha Rahman",
-    specialty: "Cardiologist",
-    experience: 12,
-    rating: 4.8,
-    fee: 1200,
-    avatar: "https://i.pravatar.cc/150?img=47",
-    about: "Expert in adult cardiology, ECG interpretation and heart failure management.",
-  },
-  {
-    id: "d2",
-    name: "Dr. Kamrul Hasan",
-    specialty: "Dermatologist",
-    experience: 8,
-    rating: 4.6,
-    fee: 800,
-    avatar: "https://i.pravatar.cc/150?img=12",
-    about: "Skin specialist for acne, eczema and cosmetic dermatology.",
-  },
-  {
-    id: "d3",
-    name: "Dr. Noor Jahan",
-    specialty: "Pediatrician",
-    experience: 10,
-    rating: 4.9,
-    fee: 1000,
-    avatar: "https://i.pravatar.cc/150?img=65",
-    about: "Child health, immunization and growth monitoring specialist.",
-  },
-  // add more as needed
-];
+const PatientAppointment = () => {
+  const [appointments, setAppointments] = useState([]);
+  const [filter, setFilter] = useState("All");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [selected, setSelected] = useState(null); 
 
-const DoctorAppointment = () => {
-  const [doctors, setDoctors] = useState([]);
-  const [query, setQuery] = useState("");
-  const [specialty, setSpecialty] = useState("All");
-  const [selectedDoctor, setSelectedDoctor] = useState(null);
-
-  // Booking form state
-  const [booking, setBooking] = useState({
-    patientName: "",
-    contact: "",
-    date: "",
-    time: "",
-    reason: "",
-  });
-
-  const [bookingLoading, setBookingLoading] = useState(false);
-  const [bookingSuccess, setBookingSuccess] = useState("");
-  const [bookingError, setBookingError] = useState("");
-
-  const [loadingDoctors, setLoadingDoctors] = useState(true);
+  // Fetch appointments from backend
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      const res = await api.get("/appointments/patient"); 
+      setAppointments(res.data.appointments || []);
+    } catch (err) {
+      console.error("Fetch appointments error:", err);
+      setError(err.response?.data?.message || "Failed to load appointments");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-   
-    const load = async () => {
-      setLoadingDoctors(true);
-      try {
-        await new Promise((r) => setTimeout(r, 600)); // simulate delay
-        setDoctors(mockDoctors);
-      } catch (err) {
-        setDoctors(mockDoctors); // fallback
-      } finally {
-        setLoadingDoctors(false);
-      }
-    };
-    load();
+    fetchAppointments();
   }, []);
 
-  const specialties = useMemo(() => {
-    const setS = new Set(["All"]);
-    doctors.forEach((d) => setS.add(d.specialty));
-    return Array.from(setS);
-  }, [doctors]);
+  // Filter appointments
+  const filtered = filter === "All"
+    ? appointments
+    : appointments.filter(a => (a.status || "").toLowerCase() === filter.toLowerCase());
 
-  const filtered = useMemo(() => {
-    return doctors.filter((d) => {
-      const matchesQuery =
-        query.trim() === "" ||
-        d.name.toLowerCase().includes(query.toLowerCase()) ||
-        d.specialty.toLowerCase().includes(query.toLowerCase());
-      const matchesSpecialty = specialty === "All" || d.specialty === specialty;
-      return matchesQuery && matchesSpecialty;
-    });
-  }, [doctors, query, specialty]);
-
-  // handle select doctor
-  const openBookingFor = (doctor) => {
-    setSelectedDoctor(doctor);
-    setBooking({
-      patientName: "",
-      contact: "",
-      date: "",
-      time: "",
-      reason: "",
-    });
-    setBookingError("");
-    setBookingSuccess("");
-  };
-
-  const handleBookingChange = (e) => {
-    const { name, value } = e.target;
-    setBooking((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const validateBooking = () => {
-    if (!selectedDoctor) return "Select a doctor first.";
-    if (!booking.patientName.trim()) return "Patient name is required.";
-    if (!booking.contact.trim()) return "Contact is required.";
-    if (!booking.date) return "Date is required.";
-    if (!booking.time) return "Time is required.";
-    return null;
-  };
-
-  const submitBooking = async (e) => {
-    e.preventDefault();
-    const errMsg = validateBooking();
-    if (errMsg) {
-      setBookingError(errMsg);
-      setTimeout(() => setBookingError(""), 4000);
-      return;
-    }
-
-    setBookingLoading(true);
-    setBookingError("");
-    setBookingSuccess("");
-
+  // Cancel appointment
+  const cancelAppointment = async (id) => {
+    if (!confirm("Are you sure you want to cancel this appointment?")) return;
     try {
-      // Replace with actual API call:
-      // const res = await api.post("/appointments", { doctorId: selectedDoctor.id, ...booking });
-      await new Promise((r) => setTimeout(r, 800)); // simulate network
-      setBookingSuccess("Appointment booked successfully!");
-      // optionally: close panel or reset
-      setTimeout(() => setBookingSuccess(""), 4000);
+      setSaving(true);
+      const res = await api.patch(`/appointments/status/update`, { appointmentId: id, status: "CANCELLED" });
+      setAppointments(prev => prev.map(a => a._id === id ? { ...a, status: "Cancelled" } : a));
+      alert(res.data?.message || "Appointment cancelled");
     } catch (err) {
-      setBookingError("Failed to book appointment. Try again.");
+      console.error("Cancel error:", err);
+      alert(err.response?.data?.message || "Failed to cancel appointment");
     } finally {
-      setBookingLoading(false);
+      setSaving(false);
+    }
+  };
+
+  // Open / Close details modal
+  const openDetails = (appt) => setSelected(appt);
+  const closeDetails = () => setSelected(null);
+
+  // Join live consultation
+  const joinLive = async (appt) => {
+    try {
+      if (appt.liveUrl) {
+        window.open(appt.liveUrl, "_blank");
+        return;
+      }
+
+      setSaving(true);
+      const res = await api.post(`/appointments/${appt._id}/live`);
+      const liveUrl = res.data.liveUrl || res.data.url;
+      if (liveUrl) {
+        setAppointments(prev => prev.map(a => a._id === appt._id ? { ...a, liveUrl } : a));
+        window.open(liveUrl, "_blank");
+      } else {
+        alert("Live URL not returned from server");
+      }
+    } catch (err) {
+      console.error("Live join error:", err);
+      alert(err.response?.data?.message || "Failed to start/join live consultation");
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-4 dark:text-white">Book an Appointment</h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Search & List */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-3 items-center">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search doctor or specialty..."
-              className="flex-1 border px-3 py-2 rounded-md dark:bg-gray-700 dark:text-white outline-none"
-            />
-            <select
-              value={specialty}
-              onChange={(e) => setSpecialty(e.target.value)}
-              className="w-44 border px-3 py-2 rounded-md dark:bg-gray-700 dark:text-white outline-none"
-            >
-              {specialties.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => {
-                setQuery("");
-                setSpecialty("All");
-              }}
-              className="px-3 py-2 bg-gray-200 rounded-md hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500"
-            >
-              Reset
-            </button>
-          </div>
-
-          {/* Doctor list */}
-          <div className="space-y-4">
-            {loadingDoctors ? (
-              // simple skeleton list
-              Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="animate-pulse bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-                  <div className="h-4 w-1/3 bg-gray-300 dark:bg-gray-700 rounded mb-2"></div>
-                  <div className="h-3 w-full bg-gray-300 dark:bg-gray-700 rounded mb-1"></div>
-                </div>
-              ))
-            ) : filtered.length === 0 ? (
-              <div className="p-4 bg-white dark:bg-gray-800 rounded text-gray-600">No doctors found.</div>
-            ) : (
-              filtered.map((doctor) => (
-                <DoctorCard key={doctor.id} doctor={doctor} onBook={() => openBookingFor(doctor)} />
-              ))
-            )}
-          </div>
+    <div className="p-6 max-w-5xl mx-auto mt-16 space-y-6">
+      {/* Header */}
+      <header className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">My Appointments</h1>
+          <p className="text-sm text-gray-600">Manage and join your consultations</p>
         </div>
 
-        {/* Right: Booking panel */}
-        <aside className="lg:col-span-1 bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-          {!selectedDoctor ? (
-            <div className="text-center text-gray-600">
-              <p className="mb-3">Choose a doctor to book an appointment</p>
-              <p className="text-sm">Click <span className="font-semibold">Book</span> on any doctor card.</p>
-            </div>
-          ) : (
-            <div>
-              <div className="flex items-center gap-3 mb-3">
-                <img src={selectedDoctor.avatar} alt={selectedDoctor.name} className="w-12 h-12 rounded-full" />
+        <div className="flex items-center gap-3">
+          <select
+            className="border px-3 py-2 rounded-md"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+
+          <button
+            onClick={fetchAppointments}
+            className="px-3 py-2 bg-gray-200 rounded hover:bg-gray-300"
+            title="Refresh"
+          >
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      {/* Loading / Error / Empty */}
+      {loading ? (
+        <div className="text-center py-20">Loading appointments...</div>
+      ) : error ? (
+        <div className="text-center text-red-600">{error}</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-10 text-gray-600">No appointments found.</div>
+      ) : (
+        <div className="space-y-4">
+          {filtered.map((a) => (
+            <article key={a._id} className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 border rounded-lg bg-white shadow-sm">
+              <div className="flex items-center gap-4">
+                <img
+                  src={a.doctor?.photo_url || a.doctor?.photo || "/default-avatar.png"}
+                  alt={a.doctor?.name || "Doctor"}
+                  className="w-14 h-14 rounded-full object-cover border"
+                />
                 <div>
-                  <div className="font-semibold">{selectedDoctor.name}</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">{selectedDoctor.specialty}</div>
+                  <h3 className="font-semibold">{a.doctor?.name || "Doctor"}</h3>
+                  <p className="text-sm text-gray-600">{a.doctor?.specialization || "General"}</p>
+                  <p className="text-sm text-gray-600 mt-1">
+                    {new Date(a.date).toLocaleDateString()} • {new Date(a.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </p>
                 </div>
               </div>
 
-              <form onSubmit={submitBooking} className="space-y-3">
-                <div>
-                  <label className="text-sm block mb-1">Patient name</label>
-                  <input
-                    name="patientName"
-                    value={booking.patientName}
-                    onChange={handleBookingChange}
-                    className="w-full border px-3 py-2 rounded-md dark:bg-gray-700 dark:text-white outline-none"
-                    placeholder="Full name"
-                  />
-                </div>
+              <div className="flex items-center gap-3">
+                <StatusBadge status={a.status} />
 
-                <div>
-                  <label className="text-sm block mb-1">Contact</label>
-                  <input
-                    name="contact"
-                    value={booking.contact}
-                    onChange={handleBookingChange}
-                    className="w-full border px-3 py-2 rounded-md dark:bg-gray-700 dark:text-white outline-none"
-                    placeholder="Phone or email"
-                  />
-                </div>
+                <button
+                  onClick={() => openDetails(a)}
+                  className="px-3 py-1 border rounded hover:bg-gray-50"
+                >
+                  Details
+                </button>
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-sm block mb-1">Date</label>
-                    <input
-                      type="date"
-                      name="date"
-                      value={booking.date}
-                      onChange={handleBookingChange}
-                      className="w-full border px-3 py-2 rounded-md dark:bg-gray-700 dark:text-white outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-sm block mb-1">Time</label>
-                    <input
-                      type="time"
-                      name="time"
-                      value={booking.time}
-                      onChange={handleBookingChange}
-                      className="w-full border px-3 py-2 rounded-md dark:bg-gray-700 dark:text-white outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm block mb-1">Reason (optional)</label>
-                  <textarea
-                    name="reason"
-                    value={booking.reason}
-                    onChange={handleBookingChange}
-                    rows={3}
-                    className="w-full border px-3 py-2 rounded-md dark:bg-gray-700 dark:text-white outline-none"
-                    placeholder="Short note about symptoms..."
-                  />
-                </div>
-
-                {bookingError && <div className="text-red-500 text-sm">{bookingError}</div>}
-                {bookingSuccess && <div className="text-green-500 text-sm">{bookingSuccess}</div>}
-
-                <div className="flex gap-2">
+                {["Accepted", "Approved"].includes((a.status || "").toString()) && (
                   <button
-                    type="submit"
-                    disabled={bookingLoading}
-                    className={`flex-1 px-4 py-2 rounded-md text-white ${bookingLoading ? "bg-gray-400" : "bg-green-600"}`}
+                    onClick={() => joinLive(a)}
+                    className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-500"
+                    disabled={saving}
                   >
-                    {bookingLoading ? "Booking..." : `Book — ৳${selectedDoctor.fee}`}
+                    Join Live
                   </button>
+                )}
+
+                {["Pending"].includes((a.status || "").toString()) && (
                   <button
-                    type="button"
-                    onClick={() => setSelectedDoctor(null)}
-                    className="px-4 py-2 rounded-md border"
+                    onClick={() => cancelAppointment(a._id)}
+                    className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-500"
+                    disabled={saving}
                   >
                     Cancel
                   </button>
-                </div>
-              </form>
-            </div>
-          )}
-        </aside>
-      </div>
-    </div>
-  );
-};
-
-const DoctorCard = ({ doctor, onBook }) => {
-  return (
-    <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-      <div className="flex items-center gap-4">
-        <img src={doctor.avatar} alt={doctor.name} className="w-16 h-16 rounded-full object-cover" />
-        <div>
-          <div className="font-semibold">{doctor.name}</div>
-          <div className="text-sm text-gray-500 dark:text-gray-400">{doctor.specialty} • {doctor.experience} yrs</div>
-          <div className="text-sm text-yellow-500">{'★'.repeat(Math.round(doctor.rating))} <span className="text-gray-400 text-xs ml-1">({doctor.rating})</span></div>
-          <div className="text-sm text-gray-600 dark:text-gray-300">Fee: ৳{doctor.fee}</div>
+                )}
+              </div>
+            </article>
+          ))}
         </div>
-      </div>
-      <div className="flex flex-col items-end gap-2">
-        <button
-          onClick={onBook}
-          className="px-3 py-2 bg-green-600 text-white rounded-md"
-        >
-          Book
-        </button>
-        <button
-          className="text-sm text-gray-500"
-          onClick={() => alert(doctor.about)}
-        >
-          View
-        </button>
-      </div>
+      )}
+
+      {/* Details modal */}
+      {selected && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl bg-white rounded-lg shadow-lg p-6 relative">
+            <button onClick={closeDetails} className="absolute right-4 top-4 text-gray-600">
+              <X />
+            </button>
+
+            <h2 className="text-xl font-semibold mb-2">Appointment Details</h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-gray-500">Doctor</p>
+                <p className="font-medium">{selected.doctor?.name}</p>
+
+                <p className="text-sm text-gray-500 mt-3">Specialization</p>
+                <p>{selected.doctor?.specialization}</p>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500">Date & Time</p>
+                <p className="font-medium">{new Date(selected.date).toLocaleString()}</p>
+
+                <p className="text-sm text-gray-500 mt-3">Status</p>
+                <StatusBadge status={selected.status} />
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <p className="text-sm text-gray-500">Notes</p>
+              <p className="mt-1">{selected.notes || "No extra notes."}</p>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              {["Pending"].includes((selected.status || "").toString()) && (
+                <button
+                  onClick={() => { cancelAppointment(selected._id); closeDetails(); }}
+                  className="px-4 py-2 bg-red-600 text-white rounded"
+                >
+                  Cancel Appointment
+                </button>
+              )}
+              <button onClick={closeDetails} className="px-4 py-2 border rounded">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-export default DoctorAppointment;
+export default PatientAppointment;
+
+// Helper component for status badges
+const StatusBadge = ({ status }) => {
+  const s = (status || "").toLowerCase();
+  const classes =
+    s === "pending" ? "bg-orange-100 text-orange-800" :
+    s === "accepted" ? "bg-yellow-100 text-yellow-800" :
+    s === "approved" ? "bg-green-100 text-green-800" :
+    s === "completed" ? "bg-blue-100 text-blue-800" :
+    s === "cancelled" ? "bg-red-100 text-red-800" :
+    "bg-gray-100 text-gray-800";
+
+  return <span className={`px-3 py-1 rounded-full text-sm font-medium ${classes}`}>{status || "Unknown"}</span>;
+};
