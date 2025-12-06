@@ -87,7 +87,7 @@ const DoctorAppointment = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 mt-16">
 
       <h1 className="text-2xl font-semibold mb-4 dark:text-white">Book Doctor Appointment</h1>
 
@@ -189,10 +189,7 @@ const DoctorAppointment = () => {
     </div>
   );
 };
-
-// =======================
 // Doctor Card Component
-// =======================
 const DoctorCard = ({ doctor, openBooking }) => {
   return (
     <div className="flex items-center justify-between bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
