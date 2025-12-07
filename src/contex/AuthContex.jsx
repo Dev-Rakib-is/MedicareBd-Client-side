@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-} from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import api from "../api/api";
 
 const AuthContext = createContext();
@@ -20,16 +14,30 @@ export const AuthProvider = ({ children }) => {
   });
   const [loading, setLoading] = useState(false);
 
+  // Helper: get token from localStorage
+  const getToken = () => localStorage.getItem("token");
+
   //  Check user auth from server
   const checkAuth = useCallback(async () => {
+    const token = getToken();
+    if (!token) {
+      setUser(null);
+      return;
+    }
+
     setLoading(true);
     try {
-      const { data } = await api.get("/auth/me", { withCredentials: true });
+      const { data } = await api.get("/auth/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       setUser(data.user);
       localStorage.setItem("user", JSON.stringify(data.user));
     } catch (err) {
       setUser(null);
       localStorage.removeItem("user");
+      localStorage.removeItem("token");
     } finally {
       setLoading(false);
     }
@@ -39,17 +47,14 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, [checkAuth]);
 
-  //  Login
+  // Login
   const login = async ({ email, password }) => {
     setLoading(true);
     try {
-      const { data } = await api.post(
-        "/auth/login",
-        { email, password },
-        { withCredentials: true }
-      );
+      const { data } = await api.post("/auth/login", { email, password });
       setUser(data.user);
       localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("token", data.token); // save JWT token
       return data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -58,15 +63,14 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  //  Register Patient
+  // Register Patient
   const registerPatient = async (patientData) => {
     setLoading(true);
     try {
-      const { data } = await api.post("/auth/register/patient", patientData, {
-        withCredentials: true,
-      });
+      const { data } = await api.post("/auth/register/patient", patientData);
       setUser(data.user);
       localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("token", data.token);
       return data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -79,11 +83,10 @@ export const AuthProvider = ({ children }) => {
   const registerDoctor = async (doctorData) => {
     setLoading(true);
     try {
-      const { data } = await api.post("/auth/register/doctor", doctorData, {
-        withCredentials: true,
-      });
+      const { data } = await api.post("/auth/register/doctor", doctorData);
       setUser(data.user);
       localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("token", data.token);
       return data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -94,14 +97,9 @@ export const AuthProvider = ({ children }) => {
 
   // Logout
   const logout = async () => {
-    try {
-      await api.post("/auth/logout", {}, { withCredentials: true });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setUser(null);
-      localStorage.removeItem("user");
-    }
+    setUser(null);
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
   };
 
   return (

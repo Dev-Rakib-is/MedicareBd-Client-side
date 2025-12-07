@@ -15,6 +15,8 @@ const Navbar = ({ onHamburgerClick }) => {
   const [loading, setLoading] = useState(false);
 
   // Fetch Notifications
+  useEffect(() => {
+    if (!user) return 
   const fetchNotification = async () => {
     try {
       setLoading(true);
@@ -33,9 +35,9 @@ const Navbar = ({ onHamburgerClick }) => {
     }
   };
 
-  useEffect(() => {
+  
     fetchNotification();
-  }, []);
+  }, [user]);
 
   // Display Name Logic
   const displayname =
