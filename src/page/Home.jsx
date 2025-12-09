@@ -193,7 +193,7 @@ const Home = () => {
           <p>Loading doctors ...</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {doctors.slice(0, 4).map((doc) => (
+            {doctors.slice(0, 6).map((doc) => (
               <div key={doc._id} className="flex items-center gap-2 border-b py-1">
                 {doc.photo_url && (
                   <img

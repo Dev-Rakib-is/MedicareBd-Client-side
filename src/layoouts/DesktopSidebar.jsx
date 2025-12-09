@@ -68,44 +68,46 @@ const patientNav = [
   { label: "Home", to: "/" },
   { label: "Dashboard", to: "/dashboard" },
   { label: "Appointment", to: "/appointment" },
-  { label: "Bills", to: "/bills" },
-  { label: "Documents", to: "/documents" },
-  { label: "Notice Board", to: "/notice" },
-  { label: "Invoice", to: "/invoice" },
-  { label: "Notifications", to: "/notifications" },
   { label: "Live Consultations", to: "/consultations" },
-  { label: "Patient Cases", to: "/patient-cases" },
   { label: "Prescriptions", to: "/prescriptions" },
   { label: "Reports", to: "/reports" },
-  { label: "Setting", to: "/setting/account" },
+  { label: "Documents", to: "/documents" },
+  { label: "Patient Cases", to: "/patient-cases" },
+  { label: "Bills", to: "/bills" },
+  { label: "Invoice", to: "/invoice" },
+  { label: "Notifications", to: "/notifications" },
+  { label: "Notice Board", to: "/notice" },
+  { label: "Setting", to: "/setting/account" }
 ];
+
 
 const doctorNav = [
   { label: "Home", to: "/" },
-  { label: "Appointment", to: "/appointment" },
-  { label: "Doctors", to: "/doctors" },
+  { label: "Appointments", to: "/appointment" },
   { label: "Schedules", to: "/schedules" },
-  { label: "Notifications", to: "/notifications" },
-  { label: "Prescription", to: "/prescription" },
-  { label: "Documents", to: "/documents" },
-  { label: "Diagnosis", to: "/diagnosis" },
-  { label: "Notice Board", to: "/notice-board" },
-  { label: "Live Consultations", to: "/consultations" },
-  { label: "My Payroll", to: "/payroll" },
   { label: "Patients", to: "/patients" },
+  { label: "Diagnosis", to: "/diagnosis" },
+  { label: "Prescription", to: "/prescription" },
   { label: "Reports", to: "/reports" },
+  { label: "Documents", to: "/documents" },
+  { label: "Notifications", to: "/notifications" },
+  { label: "Live Consultations", to: "/consultations" },
+  { label: "Notice Board", to: "/notice-board" },
   { label: "SMS", to: "/sms" },
+  { label: "Doctors", to: "/doctors" },
+  { label: "My Payroll", to: "/payroll" },
   { label: "Setting", to: "/setting/account" },
 ];
+
 
 const adminNav = [
   { label: "Dashboard", to: "/admin/dashboard" },
   { label: "Users", to: "/admin/users" },
-  { label: "Notifications", to: "/notifications" },
   { label: "Doctors", to: "/admin/doctors" },
   { label: "Departments", to: "/admin/departments" },
   { label: "Payments", to: "/admin/payments" },
   { label: "Reports", to: "/admin/reports" },
+  { label: "Notifications", to: "/notifications" },
   { label: "Setting", to: "/setting/account" },
 ];
 

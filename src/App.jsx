@@ -27,6 +27,7 @@ import Prescriptions from "./page/Prescriptions";
 import { useAuth } from "./contex/AuthContex";
 import Reports from "./page/Reports";
 import { useFontSize } from "./contex/FontContext";
+import AdminLogin from "./page/AdminLogin";
 
 
 
@@ -40,6 +41,7 @@ function App() {
     <div className={`${fontSizeClass[fontSize]}`}>
       <Routes>
       <Route element={<RootLayouts />}>
+       <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/" element={<Home />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/login" element={<Login />} />

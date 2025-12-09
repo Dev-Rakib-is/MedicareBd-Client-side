@@ -12,7 +12,7 @@ const Login = () => {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("PATIENT");
+  const [role, setRole] = useState("PATIENT"); // Default role
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -26,7 +26,11 @@ const Login = () => {
     try {
       setLoading(true);
       await login({ email, password, role });
-      navigate("/");
+
+      // Role-based redirect
+      if (role === "ADMIN") navigate("/admin/dashboard");
+      else if (role === "DOCTOR") navigate("/dashboard");
+      else navigate("/"); // PATIENT
     } catch (err) {
       setError(err.response?.data?.message || "Login Failed");
       setTimeout(() => setError(""), 3000);
@@ -40,7 +44,7 @@ const Login = () => {
     setError("");
     try {
       setLoading(true);
-      await sendOtp({ phone });
+      await sendOtp({ phone, role });
       setOtpSent(true);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to send OTP");
@@ -54,8 +58,12 @@ const Login = () => {
     setError("");
     try {
       setLoading(true);
-      await verifyOtp({ phone, otp });
-      navigate("/");
+      await verifyOtp({ phone, otp, role });
+
+      // Role-based redirect
+      if (role === "ADMIN") navigate("/admin/dashboard");
+      else if (role === "DOCTOR") navigate("/dashboard");
+      else navigate("/"); // PATIENT
     } catch (err) {
       setError(err.response?.data?.message || "OTP Verification Failed");
       setTimeout(() => setError(""), 3000);
@@ -65,7 +73,7 @@ const Login = () => {
   };
 
   return (
-    <section className="flex items-center justify-center min-h-screen bg-white dark:bg-black">
+    <section className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
       <form
         onSubmit={isOtpLogin ? (e) => e.preventDefault() : handleLogin}
         className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md space-y-6 transition-all"
@@ -115,6 +123,7 @@ const Login = () => {
               </button>
             </div>
 
+            {/* Role Selection */}
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
@@ -122,6 +131,7 @@ const Login = () => {
             >
               <option value="PATIENT">Patient</option>
               <option value="DOCTOR">Doctor</option>
+              <option value="ADMIN">Admin</option>
             </select>
           </>
         )}
@@ -146,6 +156,17 @@ const Login = () => {
                 required
               />
             )}
+
+            {/* Role Selection */}
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="input-box dark:placeholder-white/70"
+            >
+              <option value="PATIENT">Patient</option>
+              <option value="DOCTOR">Doctor</option>
+              <option value="ADMIN">Admin</option>
+            </select>
           </>
         )}
 
