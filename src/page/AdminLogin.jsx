@@ -18,10 +18,11 @@ const AdminLogin = () => {
     try {
       setLoading(true);
       // Role fixed as ADMIN
-      await login({ email, password, role: "ADMIN" });
+      const data = await login({ email, password, role: "ADMIN" });
+      console.log("Login success:", data);
       navigate("/admin/dashboard");
     } catch (err) {
-      setError(err.response?.data?.message || "Login Failed");
+      setError(err.message || "Login Failed");
       setTimeout(() => setError(""), 3000);
     } finally {
       setLoading(false);

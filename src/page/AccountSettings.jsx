@@ -76,11 +76,13 @@ const AccountSettings = () => {
       formData.append("interests", interests);
       formData.append("email", email);
       formData.append("phone", phone);
-      if (photo) formData.append("photo", photo);
+      if (photo) formData.append("photo", photo); // Cloudinary supported on server
 
-      await api.patch("/auth/me", formData, {
+      const res = await api.patch("/auth/me", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+
+      setUserPhoto(res.data.user.photo_url); // Update preview
       setSuccess("Profile updated successfully!");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update profile");
@@ -91,18 +93,16 @@ const AccountSettings = () => {
 
   // Delete Account
   const handleDeleteAccount = async () => {
-  try {
-    setLoading(true);
-    const res = await api.delete("/users/me"); 
-    console.log(res.data);
-    navigate("/login");
-  } catch (err) {
-    console.log(err);
-  } finally {
-    setLoading(false);
-  }
-};
-
+    try {
+      setLoading(true);
+      await api.delete("/users/me");
+      navigate("/login");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete account");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="p-6 w-full max-w-xl">
@@ -245,12 +245,14 @@ const AccountSettings = () => {
       </div>
 
       {/* Danger Zone */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition mt-6 cursor-pointer"
-      >
-        Delete Account
-      </button>
+      {user.role !== "ADMIN" && (
+        <button
+          onClick={() => setIsOpen(true)}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition mt-6 cursor-pointer"
+        >
+          Delete Account
+        </button>
+      )}
 
       {/* Modal */}
       <AnimatePresence>
@@ -264,9 +266,10 @@ const AccountSettings = () => {
           >
             <div className="w-full max-w-md p-8 rounded-md shadow-2xl border border-black/40 dark:border-white/40 text-center bg-gray-900 dark:bg-gray-900">
               <h2 className="font-semibold text-xl text-white mb-4">Confirm Delete</h2>
-              <p className="text-base font-normal mb-5  text-white">
+              <p className="text-base font-normal mb-5 text-white">
                 Are you sure you want to delete your account?
               </p>
+
               <div className="flex justify-center gap-4">
                 <motion.button
                   disabled={loading}

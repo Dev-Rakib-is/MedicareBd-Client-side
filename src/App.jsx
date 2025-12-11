@@ -28,6 +28,8 @@ import { useAuth } from "./contex/AuthContex";
 import Reports from "./page/Reports";
 import { useFontSize } from "./contex/FontContext";
 import AdminLogin from "./page/AdminLogin";
+import AdminDashboard from "./components/dashboard/AdminDashboard";
+import AdminUsers from "./page/AdminUsers";
 
 
 
@@ -41,8 +43,10 @@ function App() {
     <div className={`${fontSizeClass[fontSize]}`}>
       <Routes>
       <Route element={<RootLayouts />}>
-       <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/" element={<Home />} />
+        <Route path="/admin/dashboard" element={<AdminDashboard/>}/>
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         <Route path="/login" element={<Login />} />
         <Route path="/registration" element={<Registration />} />

@@ -104,8 +104,8 @@ const Navbar = ({ onHamburgerClick }) => {
         {/* Notification Icon */}
         { user && (<div className="relative inline-block">
           <Bell
-            size={24}
-            className="cursor-pointer text-red-500 iconColor bell-dancing"
+            size={32}
+            className="cursor-pointer text-yellow-600 bell-dancing"
             onClick={() => navigate("/notifications")}
           />
 

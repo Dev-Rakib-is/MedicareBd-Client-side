@@ -77,7 +77,7 @@ const patientNav = [
   { label: "Invoice", to: "/invoice" },
   { label: "Notifications", to: "/notifications" },
   { label: "Notice Board", to: "/notice" },
-  { label: "Setting", to: "/setting/account" }
+  { label: "Settings", to: "/setting/account" }
 ];
 
 
@@ -96,7 +96,7 @@ const doctorNav = [
   { label: "SMS", to: "/sms" },
   { label: "Doctors", to: "/doctors" },
   { label: "My Payroll", to: "/payroll" },
-  { label: "Setting", to: "/setting/account" },
+  { label: "Settings", to: "/setting/account" },
 ];
 
 
@@ -108,7 +108,7 @@ const adminNav = [
   { label: "Payments", to: "/admin/payments" },
   { label: "Reports", to: "/admin/reports" },
   { label: "Notifications", to: "/notifications" },
-  { label: "Setting", to: "/setting/account" },
+  { label: "Settings", to: "/setting/account" },
 ];
 
   const renderNav = (list) =>
