@@ -1,4 +1,4 @@
-import { Route, Routes, useNavigate } from "react-router";
+import { Route, Routes, Navigate } from "react-router";
 import "./App.css";
 import Unauthorized from "./page/Unauthorized";
 import Home from "./page/Home";
@@ -31,52 +31,84 @@ import AdminLogin from "./page/AdminLogin";
 import AdminDashboard from "./components/dashboard/AdminDashboard";
 import AdminUsers from "./page/AdminUsers";
 
-
+// Doctor Protect Component
+import Doctor from "./page/Doctor";
+import AdminDoctors from "./components/doctor/AdminDoctors";
+import PatientDoctor from "./components/doctor/PatientDoctor";
 
 
 function App() {
-  const {user}=useAuth();
-  const Navigate = useNavigate();
-  const {fontSize,fontSizeClass}=useFontSize()
+  const { user } = useAuth();
+  const { fontSize, fontSizeClass } = useFontSize();
 
   return (
     <div className={`${fontSizeClass[fontSize]}`}>
       <Routes>
-      <Route element={<RootLayouts />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard/>}/>
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route path="/admin/users" element={<AdminUsers />} />
-        <Route path="/unauthorized" element={<Unauthorized />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/registration" element={<Registration />} />
-        <Route path="/doctor-details" element={<DoctorDetails />} />
-        <Route path="/book-appointment" element={<BookAppointment />} />
-        <Route path="/notifications" element={<Notification/>}/>
-        <Route path="/dashboard" element={<Dashboard/>}/>
-        <Route path="/appointment" element={<Appointment/>}/>
-        <Route path="notice" element={<NoticeBoard/>}/>
-        <Route path="/bills" element={<BillsPage/>}/>
-        <Route path="/documents" element={<Documents/>}/>
-        <Route path="/consultations" element={<LiveConsultation/>}/>
-        <Route path="/invoice" element={<Invoice/>}/>
-        <Route path="/payroll" element={<Payroll/>}/>
-        <Route path="/patients" element={<PatientsPage/>}/>
-        <Route path="/patient-cases"  element={<PatientCases/>}/>
-        <Route path="/prescriptions" element={user ? <Prescriptions patientId={user._id}/>:<Navigate to="/login"/>}/>
-        <Route path="/reports" element={user? <Reports patientId={user._id}/>:<Navigate to="/login"/>}/>
-        {/* Settings Route */}
-        <Route path="setting" element={<SettingsLayout />}>
-          <Route path="account" element={<AccountSettings />} />
-          <Route path="preferences" element={<PreferenceSettings />} />
-          <Route path="notifications" element={<NotificationSettings />} />
-          <Route path="security" element={<SecuritySettings />} />
+        <Route element={<RootLayouts />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
+
+          <Route path="/unauthorized" element={<Unauthorized />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/registration" element={<Registration />} />
+
+          <Route path="/doctor-details" element={<DoctorDetails />} />
+          <Route path="/book-appointment" element={<BookAppointment />} />
+
+          <Route path="/notifications" element={<Notification />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/appointment" element={<Appointment />} />
+          <Route path="/notice" element={<NoticeBoard />} />
+          <Route path="/bills" element={<BillsPage />} />
+          <Route path="/documents" element={<Documents />} />
+          <Route path="/consultations" element={<LiveConsultation />} />
+          <Route path="/invoice" element={<Invoice />} />
+          <Route path="/payroll" element={<Payroll />} />
+          <Route path="/patients" element={<PatientsPage />} />
+          <Route path="/patient-cases" element={<PatientCases />} />
+
+          <Route
+            path="/prescriptions"
+            element={
+              user ? (
+                <Prescriptions patientId={user._id} />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+
+          <Route
+            path="/reports"
+            element={
+              user ? (
+                <Reports patientId={user._id} />
+              ) : (
+                <Navigate to="/login" />
+              )
+            }
+          />
+
+          {/* Doctor Routes with Guard */}
+          <Route
+            path="/admin/doctors"
+          >
+            <Route index element={<AdminDoctors />} />
+            <Route path="patient" element={<PatientDoctor />} />
+          </Route>
+
+          {/* Settings Routes */}
+          <Route path="setting" element={<SettingsLayout />}>
+            <Route path="account" element={<AccountSettings />} />
+            <Route path="preferences" element={<PreferenceSettings />} />
+            <Route path="notifications" element={<NotificationSettings />} />
+            <Route path="security" element={<SecuritySettings />} />
+          </Route>
         </Route>
-      </Route>
-    </Routes>
+      </Routes>
     </div>
   );
 }
-
 export default App;
-

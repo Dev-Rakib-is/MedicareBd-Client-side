@@ -68,6 +68,7 @@ const patientNav = [
   { label: "Home", to: "/" },
   { label: "Dashboard", to: "/dashboard" },
   { label: "Appointment", to: "/appointment" },
+  { label: "Doctors", to: "/admin/doctors/patient" },
   { label: "Live Consultations", to: "/consultations" },
   { label: "Prescriptions", to: "/prescriptions" },
   { label: "Reports", to: "/reports" },
@@ -103,7 +104,7 @@ const doctorNav = [
 const adminNav = [
   { label: "Dashboard", to: "/admin/dashboard" },
   { label: "Users", to: "/admin/users" },
-  { label: "Doctors", to: "/admin/doctors" },
+  { label: "Doctors", to: "/admin/doctors"},
   { label: "Departments", to: "/admin/departments" },
   { label: "Payments", to: "/admin/payments" },
   { label: "Reports", to: "/admin/reports" },
