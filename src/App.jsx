@@ -4,7 +4,7 @@ import Unauthorized from "./page/Unauthorized";
 import Home from "./page/Home";
 import RootLayouts from "./layoouts/RootLayouts";
 import Login from "./page/Login";
-import { Registration } from "./page/Registration";
+import Registration  from "./page/Registration";
 import BookAppointment from "./page/BookAppointment";
 import DoctorDetails from "./page/DoctorDetails";
 import SettingsLayout from './layoouts/SettingsLayout';
@@ -32,9 +32,10 @@ import AdminDashboard from "./components/dashboard/AdminDashboard";
 import AdminUsers from "./page/AdminUsers";
 
 // Doctor Protect Component
-import Doctor from "./page/Doctor";
 import AdminDoctors from "./components/doctor/AdminDoctors";
 import PatientDoctor from "./components/doctor/PatientDoctor";
+import AdminDepartments from "./page/AdminDepartments";
+import TermsPage from "./page/TermsPage";
 
 
 function App() {
@@ -68,6 +69,8 @@ function App() {
           <Route path="/payroll" element={<Payroll />} />
           <Route path="/patients" element={<PatientsPage />} />
           <Route path="/patient-cases" element={<PatientCases />} />
+          <Route path="/admin/Departments" element={<AdminDepartments />} />
+          <Route path="/terms" element={<TermsPage />} />
 
           <Route
             path="/prescriptions"

@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
-import api from "../../api/api"; 
-import { X } from "lucide-react"; 
-const STATUS_OPTIONS = ["All", "Pending", "Accepted", "Approved", "Completed", "Cancelled", "Rejected"];
+import api from "../../api/api";
+import { X } from "lucide-react";
+const STATUS_OPTIONS = [
+  "All",
+  "Pending",
+  "Accepted",
+  "Approved",
+  "Completed",
+  "Cancelled",
+  "Rejected",
+];
 
 const PatientAppointment = () => {
   const [appointments, setAppointments] = useState([]);
@@ -9,14 +17,14 @@ const PatientAppointment = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [selected, setSelected] = useState(null); 
+  const [selected, setSelected] = useState(null);
 
   // Fetch appointments from backend
   const fetchAppointments = async () => {
     try {
       setLoading(true);
       setError("");
-      const res = await api.get("/appointments/patient"); 
+      const res = await api.get("/appointments/patient");
       setAppointments(res.data.appointments || []);
     } catch (err) {
       console.error("Fetch appointments error:", err);
@@ -31,17 +39,25 @@ const PatientAppointment = () => {
   }, []);
 
   // Filter appointments
-  const filtered = filter === "All"
-    ? appointments
-    : appointments.filter(a => (a.status || "").toLowerCase() === filter.toLowerCase());
+  const filtered =
+    filter === "All"
+      ? appointments
+      : appointments.filter(
+          (a) => (a.status || "").toLowerCase() === filter.toLowerCase()
+        );
 
   // Cancel appointment
   const cancelAppointment = async (id) => {
     if (!confirm("Are you sure you want to cancel this appointment?")) return;
     try {
       setSaving(true);
-      const res = await api.patch(`/appointments/status/update`, { appointmentId: id, status: "CANCELLED" });
-      setAppointments(prev => prev.map(a => a._id === id ? { ...a, status: "Cancelled" } : a));
+      const res = await api.patch(`/appointments/status/update`, {
+        appointmentId: id,
+        status: "CANCELLED",
+      });
+      setAppointments((prev) =>
+        prev.map((a) => (a._id === id ? { ...a, status: "Cancelled" } : a))
+      );
       alert(res.data?.message || "Appointment cancelled");
     } catch (err) {
       console.error("Cancel error:", err);
@@ -67,14 +83,18 @@ const PatientAppointment = () => {
       const res = await api.post(`/appointments/${appt._id}/live`);
       const liveUrl = res.data.liveUrl || res.data.url;
       if (liveUrl) {
-        setAppointments(prev => prev.map(a => a._id === appt._id ? { ...a, liveUrl } : a));
+        setAppointments((prev) =>
+          prev.map((a) => (a._id === appt._id ? { ...a, liveUrl } : a))
+        );
         window.open(liveUrl, "_blank");
       } else {
         alert("Live URL not returned from server");
       }
     } catch (err) {
       console.error("Live join error:", err);
-      alert(err.response?.data?.message || "Failed to start/join live consultation");
+      alert(
+        err.response?.data?.message || "Failed to start/join live consultation"
+      );
     } finally {
       setSaving(false);
     }
@@ -86,7 +106,9 @@ const PatientAppointment = () => {
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">My Appointments</h1>
-          <p className="text-sm text-gray-600">Manage and join your consultations</p>
+          <p className="text-sm text-gray-600">
+            Manage and join your consultations
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -95,7 +117,11 @@ const PatientAppointment = () => {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           >
-            {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
           </select>
 
           <button
@@ -114,22 +140,39 @@ const PatientAppointment = () => {
       ) : error ? (
         <div className="text-center text-red-600">{error}</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-10 text-gray-600">No appointments found.</div>
+        <div className="text-center py-10 text-gray-600">
+          No appointments found.
+        </div>
       ) : (
         <div className="space-y-4">
           {filtered.map((a) => (
-            <article key={a._id} className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 border rounded-lg bg-white shadow-sm">
+            <article
+              key={a._id}
+              className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 border rounded-lg bg-white shadow-sm"
+            >
               <div className="flex items-center gap-4">
                 <img
-                  src={a.doctor?.photo_url || a.doctor?.photo || "/default-avatar.png"}
+                  src={
+                    a.doctor?.photo_url ||
+                    a.doctor?.photo ||
+                    "/default-avatar.png"
+                  }
                   alt={a.doctor?.name || "Doctor"}
                   className="w-14 h-14 rounded-full object-cover border"
                 />
                 <div>
-                  <h3 className="font-semibold">{a.doctor?.name || "Doctor"}</h3>
-                  <p className="text-sm text-gray-600">{a.doctor?.specialization || "General"}</p>
+                  <h3 className="font-semibold">
+                    {a.doctor?.name || "Doctor"}
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {a.doctor?.specialization || "General"}
+                  </p>
                   <p className="text-sm text-gray-600 mt-1">
-                    {new Date(a.date).toLocaleDateString()} • {new Date(a.date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {new Date(a.date).toLocaleDateString()} •{" "}
+                    {new Date(a.date).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </p>
                 </div>
               </div>
@@ -144,7 +187,9 @@ const PatientAppointment = () => {
                   Details
                 </button>
 
-                {["Accepted", "Approved"].includes((a.status || "").toString()) && (
+                {["Accepted", "Approved"].includes(
+                  (a.status || "").toString()
+                ) && (
                   <button
                     onClick={() => joinLive(a)}
                     className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-500"
@@ -173,7 +218,10 @@ const PatientAppointment = () => {
       {selected && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-2xl bg-white rounded-lg shadow-lg p-6 relative">
-            <button onClick={closeDetails} className="absolute right-4 top-4 text-gray-600">
+            <button
+              onClick={closeDetails}
+              className="absolute right-4 top-4 text-gray-600"
+            >
               <X />
             </button>
 
@@ -190,7 +238,9 @@ const PatientAppointment = () => {
 
               <div>
                 <p className="text-sm text-gray-500">Date & Time</p>
-                <p className="font-medium">{new Date(selected.date).toLocaleString()}</p>
+                <p className="font-medium">
+                  {new Date(selected.date).toLocaleString()}
+                </p>
 
                 <p className="text-sm text-gray-500 mt-3">Status</p>
                 <StatusBadge status={selected.status} />
@@ -205,13 +255,21 @@ const PatientAppointment = () => {
             <div className="flex justify-end gap-3 mt-6">
               {["Pending"].includes((selected.status || "").toString()) && (
                 <button
-                  onClick={() => { cancelAppointment(selected._id); closeDetails(); }}
+                  onClick={() => {
+                    cancelAppointment(selected._id);
+                    closeDetails();
+                  }}
                   className="px-4 py-2 bg-red-600 text-white rounded"
                 >
                   Cancel Appointment
                 </button>
               )}
-              <button onClick={closeDetails} className="px-4 py-2 border rounded">Close</button>
+              <button
+                onClick={closeDetails}
+                className="px-4 py-2 border rounded"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
@@ -226,12 +284,21 @@ export default PatientAppointment;
 const StatusBadge = ({ status }) => {
   const s = (status || "").toLowerCase();
   const classes =
-    s === "pending" ? "bg-orange-100 text-orange-800" :
-    s === "accepted" ? "bg-yellow-100 text-yellow-800" :
-    s === "approved" ? "bg-green-100 text-green-800" :
-    s === "completed" ? "bg-blue-100 text-blue-800" :
-    s === "cancelled" ? "bg-red-100 text-red-800" :
-    "bg-gray-100 text-gray-800";
+    s === "pending"
+      ? "bg-orange-100 text-orange-800"
+      : s === "accepted"
+      ? "bg-yellow-100 text-yellow-800"
+      : s === "approved"
+      ? "bg-green-100 text-green-800"
+      : s === "completed"
+      ? "bg-blue-100 text-blue-800"
+      : s === "cancelled"
+      ? "bg-red-100 text-red-800"
+      : "bg-gray-100 text-gray-800";
 
-  return <span className={`px-3 py-1 rounded-full text-sm font-medium ${classes}`}>{status || "Unknown"}</span>;
+  return (
+    <span className={`px-3 py-1 rounded-full text-sm font-medium ${classes}`}>
+      {status || "Unknown"}
+    </span>
+  );
 };

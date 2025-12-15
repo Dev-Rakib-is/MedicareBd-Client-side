@@ -179,8 +179,8 @@ const Login = () => {
           }
           className={`w-full py-3 rounded-xl text-white border font-semibold text-lg shadow-md${
             loading
-              ? " bg-purple-300 cursor-not-allowed opacity-70"
-              : " bg-purple-500 cursor-pointer"
+              ? " bg-blue-300 cursor-not-allowed opacity-70"
+              : " bg-blue-500 cursor-pointer"
           }`}
         >
           {loading

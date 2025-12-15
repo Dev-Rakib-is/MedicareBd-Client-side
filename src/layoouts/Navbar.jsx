@@ -81,20 +81,6 @@ const Navbar = ({ onHamburgerClick }) => {
 
       {/* Right Side */}
       <div className="flex items-center gap-4">
-        {user && (
-          <div className="hidden md:block text-right">
-            <p className="text-black dark:text-white text-sm font-medium">
-              Emergency Contact:
-            </p>
-            <a
-              href="tel:+8801796478185"
-              className="text-black dark:text-white hover:underline text-sm"
-            >
-              01796478185
-            </a>
-          </div>
-        )}
-
         {/* Profile Info */}
         <div className="text-black dark:text-white hidden md:block">
           <p className="text-base font-semibold">{displayname}</p>
