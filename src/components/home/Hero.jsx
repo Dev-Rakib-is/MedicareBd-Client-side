@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Clock, Users, Sparkles, ArrowRight, ChevronRight, ChevronLeft } from "lucide-react";
+import { Calendar, Clock, Users, Sparkles, ArrowRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const Hero = () => {

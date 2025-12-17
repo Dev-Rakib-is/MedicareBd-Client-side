@@ -67,7 +67,7 @@ const features = [
   },
 ];
 
-export default function PremiumFeatures() {
+export default function Features() {
   return (
     <section className="relative bg-gradient-to-b from-gray-50 to-white py-20 overflow-hidden">
       {/* Background Elements */}
