@@ -50,16 +50,6 @@ const DesktopSidebar = () => {
             Registration
           </NavLink>
         </nav>
-
-        <div className="flex flex-col items-center mb-4">
-          <p className="dark:text-white">Emergency Number :</p>
-          <a
-            href="tel:+8801796478185"
-            className="hover:underline dark:text-white"
-          >
-            +8801796478185
-          </a>
-        </div>
       </aside>
     );
   }
