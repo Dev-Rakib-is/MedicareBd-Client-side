@@ -4,6 +4,7 @@ import Navbar from "./Navbar";
 import MobileSidebar from "./MobileSidebar";
 import DesktopSidebar from "./DesktopSidebar";
 import SettingsSidebar from "./SettingsSidebar"; 
+import CookieConsent from "../page/CookieConsent";
 
 const RootLayouts = () => {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -27,6 +28,7 @@ const RootLayouts = () => {
       <div className="flex flex-col flex-1 overflow-auto">
         <Navbar onHamburgerClick={() => setMenuOpen(!menuOpen)} />
         <main className="px-2 flex-1 dark:bg-black">
+          <CookieConsent/>
           <Outlet />
         </main>
       </div>
