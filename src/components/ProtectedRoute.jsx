@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from "react-router";
 import { useAuth } from "../contex/AuthContex";
+import Login from './../page/Login';
 
 const ProtectedRoute = ({ children, role }) => {
   const location = useLocation();
@@ -9,7 +10,7 @@ const ProtectedRoute = ({ children, role }) => {
   }
 
   if (!user) {
-    return <Navigate to="/" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
   if (role && user.role !== role) {

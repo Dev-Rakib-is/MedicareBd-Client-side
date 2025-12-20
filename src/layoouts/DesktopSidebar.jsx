@@ -57,7 +57,7 @@ const DesktopSidebar = () => {
     ],
   };
 
-  // 🔹 Left aligned navigation
+  //  navigation
   const renderNav = (items) =>
     items.map((item) => (
       <NavLink
@@ -82,7 +82,7 @@ const DesktopSidebar = () => {
       <div className="border-b border-black/40 dark:border-white/40 bg-white dark:bg-gray-900 fixed top-0 left-0 w-64 z-10">
         <Link to="/" className="flex items-center gap-2 px-4 py-1.5">
           <img src={logo} alt="main logo" className="w-14 h-auto" />
-          <div>
+          <div className="line-hight">
             <p className="text-xl font-bold">Tritmo</p>
             <span className="text-xs text-gray-600 dark:text-gray-300">
               Appointment

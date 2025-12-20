@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Calendar, Clock, User, Phone, Mail, MapPin, ChevronRight, Check, CreditCard } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { Calendar, Clock, Check, CreditCard } from 'lucide-react';
 import api from '../api/api';
 
-const BookAppointment = ({ user, doctorId }) => {
+const BookAppointment = ({ user }) => {
+  const { doctorId } = useParams(); 
   const [step, setStep] = useState(1);
   const [selectedDate, setSelectedDate] = useState('');
   const [availableSlots, setAvailableSlots] = useState([]);
   const [selectedTime, setSelectedTime] = useState('');
-  const [selectedService, setSelectedService] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -17,13 +17,7 @@ const BookAppointment = ({ user, doctorId }) => {
     paymentMethod: 'CASH',
   });
   const [loading, setLoading] = useState(false);
-
-  const services = [
-    { id: 1, name: 'Consultation', duration: '30 min', price: 99 },
-    { id: 2, name: 'Full Treatment', duration: '60 min', price: 199 },
-    { id: 3, name: 'Premium Package', duration: '90 min', price: 299 },
-    { id: 4, name: 'Follow-up', duration: '20 min', price: 79 }
-  ];
+  const [doctor, setDoctor] = useState(null); 
 
   // Autofill login info
   useEffect(() => {
@@ -37,16 +31,30 @@ const BookAppointment = ({ user, doctorId }) => {
     }
   }, [user]);
 
+  // Fetch doctor info
+  useEffect(() => {
+    const fetchDoctor = async () => {
+      if (!doctorId) return;
+      try {
+        const res = await api.get(`/doctors/${doctorId}`);
+        setDoctor(res.data.doctor);
+      } catch (err) {
+        console.error("Failed to fetch doctor info", err);
+      }
+    };
+    fetchDoctor();
+  }, [doctorId]);
+
   // Fetch available slots whenever date changes
   useEffect(() => {
     const fetchSlots = async () => {
-      if (!selectedDate) return;
+      if (!selectedDate || !doctorId) return;
       try {
         const token = localStorage.getItem('token');
         const res = await api.get(`/doctors/${doctorId}/available-slots?date=${selectedDate}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        setAvailableSlots(res.data.slots); 
+        setAvailableSlots(res.data.slots || []); 
       } catch (err) {
         console.error(err);
         setAvailableSlots([]);
@@ -60,20 +68,15 @@ const BookAppointment = ({ user, doctorId }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleServiceSelect = (service) => {
-    setSelectedService(service);
-  };
-
   const handleNext = () => { if(step < 5) setStep(step + 1); };
   const handleBack = () => { if(step > 1) setStep(step - 1); };
 
   const isStepValid = () => {
     switch(step) {
-      case 1: return selectedService;
-      case 2: return selectedDate;
-      case 3: return selectedTime;
-      case 4: return formData.name && formData.email && formData.phone;
-      case 5: return formData.paymentMethod;
+      case 1: return selectedDate;
+      case 2: return selectedTime;
+      case 3: return formData.name && formData.email && formData.phone;
+      case 4: return formData.paymentMethod;
       default: return false;
     }
   };
@@ -82,29 +85,25 @@ const BookAppointment = ({ user, doctorId }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const serviceObj = services.find(s => s.name === selectedService);
       const payload = {
         doctorId,
         date: selectedDate,
         timeSlot: selectedTime,
-        reason: serviceObj.name,
         notes: formData.notes,
         payment: {
-          amount: serviceObj.price,
           status: formData.paymentMethod === 'CASH' ? 'UNPAID' : 'PAID',
           method: formData.paymentMethod
         }
       };
       const token = localStorage.getItem('token');
-      const res = await axios.post('/api/appointments/', payload, {
+      await api.post(`/appointments/`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
       alert('Appointment booked successfully!');
-      setStep(1);
+
+      // Reset
       setSelectedDate('');
       setSelectedTime('');
-      setSelectedService('');
       setFormData({ name:'', email:'', phone:'', notes:'', paymentMethod:'CASH' });
       setAvailableSlots([]);
     } catch (err) {
@@ -142,7 +141,7 @@ const BookAppointment = ({ user, doctorId }) => {
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-2 ${step >= stepNum ? 'bg-blue-500' : 'bg-white/20'}`}>
                       {step > stepNum ? <Check className="w-6 h-6" /> : <span className="font-semibold">{stepNum}</span>}
                     </div>
-                    <span className="text-sm">{['Service','Date','Time','Details','Payment'][stepNum-1]}</span>
+                    <span className="text-sm">{['Date','Time','Details','Payment','Confirm'][stepNum-1]}</span>
                   </div>
                 ))}
               </div>
@@ -150,7 +149,7 @@ const BookAppointment = ({ user, doctorId }) => {
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 mb-8">
                 <h3 className="font-semibold text-lg mb-4">Appointment Summary</h3>
                 <div className="space-y-3">
-                  {selectedService && <div className="flex justify-between"><span className="text-blue-200">Service</span><span className="font-medium">{selectedService}</span></div>}
+                  {doctor && <div className="flex justify-between"><span className="text-blue-200">Doctor</span><span className="font-medium">{doctor.name}</span></div>}
                   {selectedDate && <div className="flex justify-between"><span className="text-blue-200">Date</span><span className="font-medium">{new Date(selectedDate).toLocaleDateString()}</span></div>}
                   {selectedTime && <div className="flex justify-between"><span className="text-blue-200">Time</span><span className="font-medium">{selectedTime}</span></div>}
                   {formData.paymentMethod && <div className="flex justify-between"><span className="text-blue-200">Payment</span><span className="font-medium">{formData.paymentMethod}</span></div>}
@@ -161,22 +160,8 @@ const BookAppointment = ({ user, doctorId }) => {
             {/* Right Panel */}
             <div className="md:w-2/3 p-8">
               <form onSubmit={handleSubmit}>
-                {/* Step 1: Service */}
+                {/* Step 1: Date */}
                 {step===1 && (
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {services.map(s => (
-                      <button key={s.id} type="button" onClick={()=>handleServiceSelect(s.name)} className={`p-6 rounded-xl border-2 ${selectedService===s.name?'border-blue-500 bg-blue-50 shadow-lg':'border-gray-200 hover:border-blue-300 hover:shadow-md'}`}>
-                        <div className="flex justify-between items-start mb-4">
-                          <div><h3 className="font-semibold text-lg text-gray-900">{s.name}</h3><p className="text-gray-600 text-sm">{s.duration}</p></div>
-                          <span className="text-2xl font-bold text-blue-600">${s.price}</span>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Step 2: Date */}
-                {step===2 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {dates.map(d=>(
                       <button type="button" key={d.full} onClick={()=>setSelectedDate(d.full)} className={`p-4 rounded-xl border-2 ${selectedDate===d.full?'border-blue-500 bg-blue-50 shadow-lg':'border-gray-200 hover:border-blue-300'}`}>
@@ -186,8 +171,8 @@ const BookAppointment = ({ user, doctorId }) => {
                   </div>
                 )}
 
-                {/* Step 3: Time */}
-                {step===3 && (
+                {/* Step 2: Time */}
+                {step===2 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {availableSlots.length ? availableSlots.map(t=>(
                       <button type="button" key={t} onClick={()=>setSelectedTime(t)} className={`p-4 rounded-xl border-2 ${selectedTime===t?'border-blue-500 bg-blue-50 shadow-lg':'border-gray-200 hover:border-blue-300'}`}>
@@ -197,8 +182,8 @@ const BookAppointment = ({ user, doctorId }) => {
                   </div>
                 )}
 
-                {/* Step 4: Details */}
-                {step===4 && (
+                {/* Step 3: Details */}
+                {step===3 && (
                   <div className="space-y-6">
                     <div className="grid md:grid-cols-2 gap-6">
                       <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Full Name*" className="w-full px-4 py-3 border rounded-lg"/>
@@ -209,8 +194,8 @@ const BookAppointment = ({ user, doctorId }) => {
                   </div>
                 )}
 
-                {/* Step 5: Payment */}
-                {step===5 && (
+                {/* Step 4: Payment */}
+                {step===4 && (
                   <div className="space-y-4">
                     <label className="font-medium text-gray-700 flex items-center gap-2">
                       <CreditCard className="w-5 h-5"/> Select Payment Method
@@ -231,9 +216,7 @@ const BookAppointment = ({ user, doctorId }) => {
                   
                   {step<5?(
                     <button type="button" onClick={handleNext} disabled={!isStepValid()} className={`px-8 py-3 rounded-lg ${isStepValid()?'bg-blue-600 text-white':'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Continue</button>
-                  ):(
-                    <button type="submit" disabled={loading} className="px-8 py-3 bg-green-600 text-white rounded-lg">{loading?'Booking...':'Confirm & Pay'}</button>
-                  )}
+                  ):(<button type="submit" disabled={loading} className="px-8 py-3 bg-green-600 text-white rounded-lg">{loading?'Booking...':'Confirm & Pay'}</button>)}
                 </div>
               </form>
             </div>

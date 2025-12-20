@@ -6,7 +6,11 @@ import api from "../../api/api";
 
 const Hero = () => {
   const navigate = useNavigate();
-  const [stats, setStats] = useState({ doctors: 0, patients: 0, appointments: 0 });
+  const [stats, setStats] = useState({
+    doctors: 0,
+    patients: 0,
+    appointments: 0,
+  });
   const [waveOffset, setWaveOffset] = useState(0);
   const [featuredDoctor, setFeaturedDoctor] = useState(null);
 
@@ -16,7 +20,7 @@ const Hero = () => {
     }, 500);
 
     const waveInterval = setInterval(() => {
-      setWaveOffset(prev => (prev + 1) % 100);
+      setWaveOffset((prev) => (prev + 1) % 100);
     }, 50);
 
     return () => {
@@ -63,7 +67,10 @@ const Hero = () => {
               animate={{ opacity: 1, x: 0 }}
               className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 px-4 py-2 rounded-full mb-6"
             >
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 3, repeat: Infinity, ease: "linear" }}>
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              >
                 <Sparkles size={16} />
               </motion.div>
               <span className="font-medium">Tritmo</span>
@@ -83,19 +90,36 @@ const Hero = () => {
               animate={{ opacity: 1, y: 0 }}
               className="text-lg text-gray-600 mb-8 max-w-lg"
             >
-              Connect instantly with certified doctors. Book appointments, 
-              video consultations, and manage your health—all in one place.
+              Connect instantly with certified doctors. Book appointments, video
+              consultations, and manage your health—all in one place.
             </motion.p>
 
             {/* Quick Stats */}
             <div className="flex flex-wrap gap-6 mb-8">
-              {[ 
-                { icon: <Users size={20} />, value: stats.doctors, label: "Doctors", color: "text-blue-600" },
-                { icon: <Users size={20} />, value: stats.patients, label: "Patients", color: "text-green-600" },
-                { icon: <Calendar size={20} />, value: stats.appointments, label: "Appointments", color: "text-purple-600" }
+              {[
+                {
+                  icon: <Users size={20} />,
+                  value: stats.doctors,
+                  label: "Doctors",
+                  color: "text-blue-600",
+                },
+                {
+                  icon: <Users size={20} />,
+                  value: stats.patients,
+                  label: "Patients",
+                  color: "text-green-600",
+                },
+                {
+                  icon: <Calendar size={20} />,
+                  value: stats.appointments,
+                  label: "Appointments",
+                  color: "text-purple-600",
+                },
               ].map((stat, index) => (
                 <div key={index} className="text-center">
-                  <div className={`text-2xl font-bold ${stat.color} flex items-center justify-center gap-2`}>
+                  <div
+                    className={`text-2xl font-bold ${stat.color} flex items-center justify-center gap-2`}
+                  >
                     {stat.icon}
                     <span>{stat.value.toLocaleString()}+</span>
                   </div>
@@ -107,14 +131,24 @@ const Hero = () => {
             {/* CTA Buttons */}
             <div className="flex flex-wrap gap-4 mb-8">
               <button
-                onClick={() => navigate("/doctors")}
+                onClick={() => navigate("/admin/doctors/patient?from=booking")}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold flex items-center gap-2 transition-colors"
               >
                 <span>Book Appointment</span>
-                <ArrowRight size={18} />
+                <motion.div
+                  initial={{ x: 0 }}
+                  animate={{ x: [0, 4, 0] }}
+                  transition={{
+                    duration: 1,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                >
+                  <ArrowRight size={18} />
+                </motion.div>
               </button>
               <button
-                onClick={() => navigate("/doctors")}
+                onClick={() => navigate("/admin/doctors/patient")}
                 className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-3 rounded-lg font-bold transition-colors"
               >
                 View Doctors
@@ -148,8 +182,7 @@ const Hero = () => {
                   <span>
                     {featuredDoctor.featuredUntil
                       ? calculateRemainingDays(featuredDoctor.featuredUntil)
-                      : "Featured"
-                    }
+                      : "Featured"}
                   </span>
                 </div>
               </div>
@@ -166,7 +199,9 @@ const Hero = () => {
                     {featuredDoctor ? featuredDoctor.name : "Featured Doctor"}
                   </h3>
                   <p className="text-blue-600 font-medium mb-4">
-                    {featuredDoctor ? featuredDoctor.specialization : "Medical Specialist"}
+                    {featuredDoctor
+                      ? featuredDoctor.specialization
+                      : "Medical Specialist"}
                   </p>
 
                   {featuredDoctor?.status === "PENDING" && (
@@ -178,7 +213,9 @@ const Hero = () => {
                   {featuredDoctor && (
                     <div className="bg-blue-50 rounded-lg p-4 mb-4">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-gray-600">Available:</span>
+                        <span className="text-sm text-gray-600">
+                          Available:
+                        </span>
                         <span className="text-green-600 font-bold">
                           {featuredDoctor.visitingHours || "Check Schedule"}
                         </span>
@@ -187,7 +224,10 @@ const Hero = () => {
                   )}
 
                   <button
-                    onClick={() => featuredDoctor && navigate(`/doctors/${featuredDoctor._id}`)}
+                    onClick={() =>
+                      featuredDoctor &&
+                      navigate(`/book-appointment/${featuredDoctor._id}`)
+                    }
                     className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white py-3 rounded-lg font-bold transition-colors shadow-md"
                   >
                     {featuredDoctor ? "Book This Doctor" : "View All Doctors"}
@@ -198,7 +238,9 @@ const Hero = () => {
 
             {featuredDoctor && (
               <div className="absolute -bottom-3 -right-3 bg-gradient-to-r from-green-400 to-emerald-500 text-white px-3 py-1.5 rounded-lg shadow-lg">
-                <span className="font-bold">⭐{featuredDoctor.rating || 4.9}</span>
+                <span className="font-bold">
+                  ⭐{featuredDoctor.rating || 4.9}
+                </span>
                 <span className="text-xs ml-1">Rating</span>
               </div>
             )}
@@ -208,13 +250,25 @@ const Hero = () => {
 
       {/* Bottom Wave */}
       <div className="absolute bottom-0 left-0 right-0 overflow-hidden h-24">
-        <svg className="w-full h-full" viewBox="0 0 1440 120" preserveAspectRatio="none">
+        <svg
+          className="w-full h-full"
+          viewBox="0 0 1440 120"
+          preserveAspectRatio="none"
+        >
           <motion.path
             d="M0,60 C240,40 480,20 720,40 C960,60 1200,40 1440,60 L1440,120 L0,120 Z"
             fill="#3B82F6"
             fillOpacity="0.1"
             animate={{
-              d: `M0,${60 + Math.sin(waveOffset * 0.1) * 10} C240,${40 + Math.sin(waveOffset * 0.1 + 1) * 10} 480,${20 + Math.sin(waveOffset * 0.1 + 2) * 10} 720,${40 + Math.sin(waveOffset * 0.1 + 3) * 10} C960,${60 + Math.sin(waveOffset * 0.1 + 4) * 10} 1200,${40 + Math.sin(waveOffset * 0.1 + 5) * 10} 1440,${60 + Math.sin(waveOffset * 0.1 + 6) * 10} L1440,120 L0,120 Z`
+              d: `M0,${60 + Math.sin(waveOffset * 0.1) * 10} C240,${
+                40 + Math.sin(waveOffset * 0.1 + 1) * 10
+              } 480,${20 + Math.sin(waveOffset * 0.1 + 2) * 10} 720,${
+                40 + Math.sin(waveOffset * 0.1 + 3) * 10
+              } C960,${60 + Math.sin(waveOffset * 0.1 + 4) * 10} 1200,${
+                40 + Math.sin(waveOffset * 0.1 + 5) * 10
+              } 1440,${
+                60 + Math.sin(waveOffset * 0.1 + 6) * 10
+              } L1440,120 L0,120 Z`,
             }}
             transition={{ duration: 0.1 }}
           />

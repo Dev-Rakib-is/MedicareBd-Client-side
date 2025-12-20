@@ -2,6 +2,7 @@ import { motion } from "motion/react";
 import { useAuth } from "../contex/AuthContex";
 import { Link, NavLink } from "react-router";
 import { X } from "lucide-react";
+import logo from "/Tritmo.png";
 
 const MobileSidebar = ({ isOpen, onClose }) => {
   const { user, logout } = useAuth();
@@ -13,19 +14,20 @@ const MobileSidebar = ({ isOpen, onClose }) => {
         initial={{ x: "-100%" }}
         animate={{ x: isOpen ? 0 : "-100%" }}
         transition={{ type: "spring", stiffness: 90 }}
-        className="md:hidden fixed top-0 left-0 bg-gray-200 dark:bg-gray-900 w-64 h-full z-40 overflow-y-auto"
+        className="md:hidden fixed top-0 left-0 bg-gray-200 dark:bg-gray-900 w-64 h-full z-40 overflow-y-auto mt-16"
       >
         {/* Header */}
         <div className="flex justify-between p-4 border-b border-black/40 dark:border-white/40">
           <div>
-            <Link
-              to="/"
-              className="text-2xl font-bold text-green-600"
-              onClick={onClose}
-            >
-              Doctor
-            </Link>
-            <p className="text-xs font-light dark:text-white">Appointment</p>
+        <Link to="/" className="flex items-center gap-2 px-4 py-1.5">
+          <img src={logo} alt="main logo" className="w-14 h-auto" />
+          <div>
+            <p className="text-xl font-bold">Tritmo</p>
+            <span className="text-xs text-gray-600 dark:text-gray-300">
+              Appointment
+            </span>
+          </div>
+        </Link>
           </div>
 
           <motion.button whileTap={{ scale: 0.9 }} onClick={onClose}>
@@ -124,7 +126,7 @@ const adminNav = [
       initial={{ x: "-100%" }}
       animate={{ x: isOpen ? 0 : "-100%" }}
       transition={{ type: "spring", stiffness: 90 }}
-      className="md:hidden fixed top-0 left-0 bg-gray-200 dark:bg-gray-900 w-64 h-full z-40 overflow-y-auto mt-16"
+      className="md:hidden fixed top-0 left-0 bg-gray-200 dark:bg-gray-900 w-64 h-full z-40 overflow-y-auto"
     >
       {/* NAVIGATION */}
       <nav className="flex flex-col items-center space-y-3 p-2">

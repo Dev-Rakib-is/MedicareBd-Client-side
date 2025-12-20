@@ -4,14 +4,14 @@ import Unauthorized from "./page/Unauthorized";
 import Home from "./page/Home";
 import RootLayouts from "./layoouts/RootLayouts";
 import Login from "./page/Login";
-import Registration  from "./page/Registration";
+import Registration from "./page/Registration";
 import BookAppointment from "./page/BookAppointment";
 import DoctorDetails from "./page/DoctorDetails";
-import SettingsLayout from './layoouts/SettingsLayout';
-import AccountSettings from './page/AccountSettings';
-import PreferenceSettings from './page/PreferenceSettings';
-import NotificationSettings from './page/NotificationSettings';
-import SecuritySettings from './page/SecuritySettings';
+import SettingsLayout from "./layoouts/SettingsLayout";
+import AccountSettings from "./page/AccountSettings";
+import PreferenceSettings from "./page/PreferenceSettings";
+import NotificationSettings from "./page/NotificationSettings";
+import SecuritySettings from "./page/SecuritySettings";
 import Notification from "./page/Notification";
 import Dashboard from "./page/Dashboard";
 import Appointment from "./page/Appointment";
@@ -36,7 +36,7 @@ import AdminDoctors from "./components/doctor/AdminDoctors";
 import PatientDoctor from "./components/doctor/PatientDoctor";
 import AdminDepartments from "./page/AdminDepartments";
 import TermsPage from "./page/TermsPage";
-
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   const { user } = useAuth();
@@ -57,6 +57,14 @@ function App() {
 
           <Route path="/doctor-details" element={<DoctorDetails />} />
           <Route path="/book-appointment" element={<BookAppointment />} />
+          <Route
+            path="/book-appointment/:doctorId"
+            element={
+              <ProtectedRoute>
+                <BookAppointment />
+              </ProtectedRoute>
+            }
+          />
 
           <Route path="/notifications" element={<Notification />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -86,18 +94,12 @@ function App() {
           <Route
             path="/reports"
             element={
-              user ? (
-                <Reports patientId={user._id} />
-              ) : (
-                <Navigate to="/login" />
-              )
+              user ? <Reports patientId={user._id} /> : <Navigate to="/login" />
             }
           />
 
           {/* Doctor Routes with Guard */}
-          <Route
-            path="/admin/doctors"
-          >
+          <Route path="/admin/doctors">
             <Route index element={<AdminDoctors />} />
             <Route path="patient" element={<PatientDoctor />} />
           </Route>
