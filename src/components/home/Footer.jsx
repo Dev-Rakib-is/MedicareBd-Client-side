@@ -54,20 +54,18 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3">
               {[
-                "Find Doctors",
-                "Book Appointments",
-                "Video Consultation",
-                "Prescription Refill",
-                "Health Records",
-                "Emergency Care",
+                {lable:"Find Doctors",path:"/admin/doctors/patient"},
+                {lable:"Book Appointments",path:"/book-appointment"},
+                {lable:"Video Consultation",path:"/consultations"},
+                {lable:"Health Records",path:"/dashboard"},
               ].map((link, idx) => (
                 <li key={idx}>
                   <Link
-                    to={`/${link.toLowerCase().replace(/\s+/g, "-")}`}
+                    to={link.path}
                     className="text-gray-400 hover:text-white hover:translate-x-2 transition-all duration-300 flex items-center gap-2 group"
                   >
                     <span className="w-1 h-1 rounded-full bg-gray-600 group-hover:bg-blue-500"></span>
-                    {link}
+                    {link.lable}
                   </Link>
                 </li>
               ))}
@@ -81,20 +79,19 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3">
               {[
-                "Join Our Network",
-                "Practice Dashboard",
-                "Patient Management",
-                "Telemedicine Setup",
-                "Earnings & Reports",
-                "Schedule Management",
+                {lable:"Practice Dashboard",pathName:"/appointment"},
+                {lable:"Patient Management",pathName:"/patients"},
+                {lable:"Telemedicine Setup",pathName:"/consultations"},
+                {lable:"Earnings & Reports",pathName:"/payroll"},
+                {lable:"Schedule Management",pathName:"/schedules"},
               ].map((link, idx) => (
                 <li key={idx}>
                   <Link
-                    to={`/doctors/${link.toLowerCase()}`}
+                    to={link.pathName}
                     className="text-gray-400 hover:text-white hover:translate-x-2 transition-all duration-300 flex items-center gap-2 group"
                   >
                     <span className="w-1 h-1 rounded-full bg-gray-600 group-hover:bg-purple-500"></span>
-                    {link}
+                    {link.lable}
                   </Link>
                 </li>
               ))}
@@ -108,7 +105,6 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3">
               {[
-                "About Us",
                 "Careers",
                 "Press & Media",
                 "Blog",
@@ -120,7 +116,7 @@ export default function Footer() {
                     to={`/${link.toLowerCase().replace(/\s+/g, "-")}`}
                     className="text-gray-400 hover:text-white text-sm transition-colors duration-300"
                   >
-                    {link}
+                    {link} (Coming Soon)
                   </Link>
                 </li>
               ))}
@@ -160,18 +156,17 @@ export default function Footer() {
 
           <div className="flex gap-6">
             {[
-              "Privacy Policy",
-              "Terms of Service",
-              "Cookie Policy",
-              "Disclaimer",
-              "Sitemap",
+              {lable:"Privacy Policy",pathName:"/privacy-policy"},
+              {lable:"Terms of Service",pathName:"/terms"},
+              {lable:"Cookie Policy",pathName:"/cookie-policy"},
+              {lable:"Disclaimer",pathName:"/disclaimer"},
             ].map((item, idx) => (
               <Link
                 key={idx}
-                to={`/${item.toLowerCase()}`}
+                to={item.pathName}
                 className="text-gray-500 hover:text-white text-sm"
               >
-                {item}
+                {item.lable}
               </Link>
             ))}
           </div>

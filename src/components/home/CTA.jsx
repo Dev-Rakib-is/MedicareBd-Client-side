@@ -18,14 +18,14 @@ export default function CTA() {
         {/* Buttons */}
         <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
           <Link
-            to="/appointments"
+            to="/book-appointment"
             className="px-8 py-4 bg-white text-blue-600 font-semibold rounded-xl hover:bg-gray-100 transition"
           >
             Book Appointment
           </Link>
 
           <Link
-            to="/doctor/register"
+            to="/registration"
             className="px-8 py-4 border border-white text-white font-semibold rounded-xl hover:bg-white hover:text-blue-600 transition"
           >
             Join as Doctor

@@ -45,7 +45,6 @@ const PatientLiveConsaltation = ({ onEndCall }) => {
     setMessages(prev => [...prev, newMsg]);
     setMessageInput("");
     setFile(null);
-    // TODO: socket.io emit here
   };
 
   return (

@@ -76,7 +76,7 @@ const DesktopSidebar = () => {
     ));
 
   return (
-    <aside className="hidden md:flex flex-col bg-gray-200 dark:bg-gray-900 w-64 h-screen border-r border-black/40 dark:border-white/40">
+    <aside className="hidden md:flex flex-col bg-gray-200 dark:bg-gray-900 w-64 h-screen border-r border-black/40 dark:border-white/40 overflow-y-auto">
       
       {/* logo section */}
       <div className="border-b border-black/40 dark:border-white/40 bg-white dark:bg-gray-900 fixed top-0 left-0 w-64 z-10">

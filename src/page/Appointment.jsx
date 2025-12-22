@@ -1,5 +1,5 @@
-import DoctorAppointment from "../components/appointment/DoctorAppointment"
-import PatientAppointment from "../components/appointment/PatientAppointment"
+import DoctorAppointment from "../components/appointment/DoctorSideAppointment"
+import PatientAppointment from "../components/appointment/PatientSideAppointment"
 import { useAuth } from "../contex/AuthContex"
 import Login from "./Login"
 

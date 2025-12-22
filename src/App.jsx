@@ -24,9 +24,9 @@ import Payroll from "./page/Payroll";
 import PatientsPage from "./page/PatientsPage";
 import PatientCases from "./page/PatientCases";
 import Prescriptions from "./page/Prescriptions";
-import { useAuth } from "./contex/AuthContex";
+
 import Reports from "./page/Reports";
-import { useFontSize } from "./contex/FontContext";
+
 import AdminLogin from "./page/AdminLogin";
 import AdminDashboard from "./components/dashboard/AdminDashboard";
 import AdminUsers from "./page/AdminUsers";
@@ -37,6 +37,12 @@ import PatientDoctor from "./components/doctor/PatientDoctor";
 import AdminDepartments from "./page/AdminDepartments";
 import TermsPage from "./page/TermsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
+
+import { useAuth } from "./contex/AuthContex";
+import { useFontSize } from "./contex/FontContext";
+import PrivacyPolicy from "./page/PrivacyPolicy";
+import CookiePolicy from "./page/CookiePolicy";
+import Disclaimer from "./page/Disclaimer";
 
 function App() {
   const { user } = useAuth();
@@ -79,6 +85,9 @@ function App() {
           <Route path="/patient-cases" element={<PatientCases />} />
           <Route path="/admin/Departments" element={<AdminDepartments />} />
           <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/cookie-policy" element={<CookiePolicy />} />
+          <Route path="/disclaimer" element={<Disclaimer />} />
 
           <Route
             path="/prescriptions"

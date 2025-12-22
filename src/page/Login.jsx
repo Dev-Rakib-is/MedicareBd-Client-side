@@ -29,8 +29,8 @@ const Login = () => {
 
       // Role-based redirect
       if (role === "ADMIN") navigate("/admin/dashboard");
-      else if (role === "DOCTOR") navigate("/dashboard");
-      else navigate("/"); // PATIENT
+      else if (role === "DOCTOR") navigate("/");
+      else navigate("/"); 
     } catch (err) {
       setError(err.response?.data?.message || "Login Failed");
       setTimeout(() => setError(""), 3000);
