@@ -51,8 +51,8 @@ const PatientDoctor = () => {
       // Fetch doctors and specializations
       const [doctorRes, specRes] = await Promise.all([
         api.get("/doctors"),
-        api.get("/specializations")
-      ]);
+        api.get("/departments")
+      ]);      
 
       // Process doctors data
       const doctorList = Array.isArray(doctorRes.data?.doctors) 
