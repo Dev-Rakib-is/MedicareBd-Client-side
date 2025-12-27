@@ -12,16 +12,16 @@ const AdminDashboard = () => {
     totalAppointments: 0,
     totalRevenue: 0,
   });
+  
 
+  const [allDoctors, setAllDoctors] = useState([]);
   const [recentAppointments, setRecentAppointments] = useState([]);
   const [pendingDoctorsCount, setPendingDoctorsCount] = useState(0);
   const [pendingDoctors, setPendingDoctors] = useState([]);
-  const [specialization, setSpecialization] = useState([]);
+  const [specializations, setSpecializations] = useState([]);
 
-  // Modal state
   const [modalType, setModalType] = useState(null);
 
-  // Add Doctor state
   const [newDoctor, setNewDoctor] = useState({
     name: "",
     specialization: "",
@@ -34,61 +34,81 @@ const AdminDashboard = () => {
     available_slots: []
   });
 
-  // Notification state
   const [notification, setNotification] = useState({
     recipientRole: "doctor",
     type: "push",
     message: ""
   });
 
-  // ---------------- Fetch Data ----------------
   useEffect(() => {
     fetchStats();
+    fetchAllDoctors();
     fetchRecentAppointments();
     fetchPendingDoctorsCount();
     fetchSpecializations();
   }, []);
 
+  // ---------------- Fetch APIs ----------------
   const fetchStats = async () => {
     try {
       const res = await api.get("/admin/stats");
       setStats(res.data);
-    } catch (err) { console.log(err); }
+    } catch (err) {
+      console.log("Error fetching stats:", err);
+    }
+  };
+
+  const fetchAllDoctors = async () => {
+    try {
+      const res = await api.get("/doctors/admin/all");
+      if (res.data?.success) setAllDoctors(res.data.allDoctors || []);
+    } catch (err) {
+      console.log("Error fetching all doctors:", err);
+      setAllDoctors([]);
+    }
   };
 
   const fetchRecentAppointments = async () => {
     try {
       const res = await api.get("/admin/recent-appointments");
-      // Ensure it's an array
       setRecentAppointments(Array.isArray(res.data) ? res.data : []);
-    } catch (err) { console.log(err); }
+    } catch (err) {
+      console.log("Error fetching appointments:", err);
+      setRecentAppointments([]);
+    }
   };
 
   const fetchPendingDoctorsCount = async () => {
     try {
-      const res = await api.get("/doctors/pending-count");
+      const res = await api.get("/doctors/admin/status/pending-count");
       setPendingDoctorsCount(res.data.pendingCount || 0);
-    } catch (err) { console.log(err); }
+    } catch (err) {
+      console.log("Error fetching pending count:", err);
+      setPendingDoctorsCount(0);
+    }
   };
 
   const fetchPendingDoctorsList = async () => {
     try {
-      const res = await api.get("/doctors/pending/list");
-      setPendingDoctors(Array.isArray(res.data.pendingDoctors) ? res.data.pendingDoctors : []);
-    } catch (err) { console.log(err); }
+      const res = await api.get("/doctors/admin/status/pending");
+      setPendingDoctors(Array.isArray(res.data.doctors) ? res.data.doctors : []);
+    } catch (err) {
+      console.log("Error fetching pending doctors:", err);
+      setPendingDoctors([]);
+    }
   };
 
-    const fetchSpecializations = async () => {
-      try {
-        const res = await api.get("/specializations");
-        setSpecialization(res.data);
-      } catch (err) {
-        console.error("Error fetching specializations:", err);
-      }
-    };
-    
+  const fetchSpecializations = async () => {
+    try {
+      const res = await api.get("/specializations");
+      setSpecializations(res.data || []);
+    } catch (err) {
+      console.error("Error fetching specializations:", err);
+      setSpecializations([]);
+    }
+  };
 
-  // ---------------- Add Doctor ----------------
+  // ---------------- Actions ----------------
   const handleAddDoctor = async () => {
     try {
       if (!newDoctor.name) return alert("Name is required");
@@ -96,6 +116,7 @@ const AdminDashboard = () => {
 
       const res = await api.post("/doctors", newDoctor);
       alert(res.data.message || "Doctor added successfully");
+
       setNewDoctor({
         name: "",
         specialization: "",
@@ -107,29 +128,30 @@ const AdminDashboard = () => {
         fee: 0,
         available_slots: []
       });
+
       setModalType(null);
       fetchStats();
       fetchPendingDoctorsCount();
+      fetchAllDoctors();
     } catch (err) {
       console.log(err);
       alert(err.response?.data?.message || "Error adding doctor");
     }
   };
 
-  // ---------------- Approve Doctor ----------------
   const handleApproveDoctor = async (id) => {
     try {
-      await api.patch(`/doctors/approve/${id}`);
+      await api.patch(`/doctors/admin/approve/${id}`);
       alert("Doctor approved successfully");
       fetchPendingDoctorsList();
       fetchPendingDoctorsCount();
+      fetchAllDoctors();
     } catch (err) {
       console.log(err);
       alert(err.response?.data?.message || "Error approving doctor");
     }
   };
 
-  // ---------------- Send Notification ----------------
   const handleSendNotification = async () => {
     try {
       const res = await api.post("/notifications", notification);
@@ -146,13 +168,13 @@ const AdminDashboard = () => {
     <div className="p-6 w-full max-w-7xl mx-auto space-y-6 mt-16">
       <h1 className="text-3xl font-bold dark:text-white">Admin Dashboard</h1>
 
-      {/* Stats Cards */}
+      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
         <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow flex items-center gap-4">
           <Users className="w-10 h-10 text-blue-500"/>
           <div>
             <p className="text-gray-500 dark:text-gray-300 text-sm">Total Doctors</p>
-            <p className="text-xl font-semibold dark:text-white">{stats.totalDoctors}</p>
+            <p className="text-xl font-semibold dark:text-white">{allDoctors.length}</p>
           </div>
         </div>
         <div className="bg-white dark:bg-gray-800 p-5 rounded-xl shadow flex items-center gap-4">
@@ -214,7 +236,7 @@ const AdminDashboard = () => {
                 
                 <select value={newDoctor.specialization} onChange={e => setNewDoctor({...newDoctor, specialization: e.target.value})} className="p-2 rounded w-full">
                   <option value="">Select Specialization</option>
-                  {specialization.map(spec => (
+                  {specializations.map(spec => (
                     <option key={spec._id} value={spec.name}>{spec.name}</option>
                   ))}
                 </select>

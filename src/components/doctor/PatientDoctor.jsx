@@ -3,7 +3,15 @@ import api from "../../api/api";
 import DoctorList from "../doctor/DoctorList";
 import DoctorFilters from "../doctor/DoctorFilters";
 import BookingModal from "../doctor/BookingModal";
-import { Download, Users, Shield, Star, Filter, RefreshCw, AlertCircle } from "lucide-react";
+import {
+  Download,
+  Users,
+  Shield,
+  Star,
+  Filter,
+  RefreshCw,
+  AlertCircle,
+} from "lucide-react";
 
 const PatientDoctor = () => {
   const [doctors, setDoctors] = useState([]);
@@ -29,17 +37,26 @@ const PatientDoctor = () => {
   const normalizeDoctorData = (doctor) => ({
     _id: doctor._id || doctor.id,
     name: doctor.name || doctor.fullName || "Unknown Doctor",
-    specialization: doctor.specialization || doctor.speciality || "General Medicine",
+    specialization:
+      doctor.specialization || doctor.speciality || "General Medicine",
     experience: doctor.experience || doctor.yearsOfExperience || 0,
     fee: doctor.fee || doctor.consultationFee || 500,
     status: doctor.status || "ACTIVE",
-    photo_url: doctor.photo_url || doctor.photoUrl || doctor.profilePicture || "/default-doctor.png",
+    photo_url:
+      doctor.photo_url ||
+      doctor.photoUrl ||
+      doctor.profilePicture ||
+      "/default-doctor.png",
     rating: doctor.rating || 4.5,
     totalReviews: doctor.totalReviews || 0,
     isOnline: doctor.isOnline || false,
     chamber: doctor.chamber || doctor.hospital || "Medical Center",
     qualification: doctor.qualification || "MBBS",
-    consultationTypes: doctor.consultationTypes || ["In-person", "Video", "Phone"],
+    consultationTypes: doctor.consultationTypes || [
+      "In-person",
+      "Video",
+      "Phone",
+    ],
   });
 
   // Fetch doctors
@@ -51,25 +68,26 @@ const PatientDoctor = () => {
       // Fetch doctors and specializations
       const [doctorRes, specRes] = await Promise.all([
         api.get("/doctors"),
-        api.get("/departments")
-      ]);      
+        api.get("/departments"),
+      ]);
 
       // Process doctors data
-      const doctorList = Array.isArray(doctorRes.data?.doctors) 
-        ? doctorRes.data.doctors 
+      const doctorList = Array.isArray(doctorRes.data?.doctors)
+        ? doctorRes.data.doctors
         : doctorRes.data || [];
 
-      const normalizedDoctors = doctorList.map(doctor => normalizeDoctorData(doctor));
+      const normalizedDoctors = doctorList.map((doctor) =>
+        normalizeDoctorData(doctor)
+      );
 
       // Process specializations
-      const specList = Array.isArray(specRes.data) 
-        ? specRes.data 
+      const specList = Array.isArray(specRes.data)
+        ? specRes.data
         : specRes.data?.specializations || [];
 
       setDoctors(normalizedDoctors);
       setFilteredDoctors(normalizedDoctors);
       setSpecializations(specList);
-
     } catch (err) {
       console.error("Error loading doctors:", err);
       setError("Unable to load doctors. Please try again.");
@@ -87,25 +105,32 @@ const PatientDoctor = () => {
   // Filter doctors
   useEffect(() => {
     let list = [...doctors];
-    const { search, selectedSpec, selectedSort, selectedExperience, priceRange } = filters;
+    const {
+      search,
+      selectedSpec,
+      selectedSort,
+      selectedExperience,
+      priceRange,
+    } = filters;
 
     // Search filter
     if (search) {
-      list = list.filter(d =>
-        (d.name?.toLowerCase() || "").includes(search.toLowerCase()) ||
-        (d.specialization?.toLowerCase() || "").includes(search.toLowerCase())
+      list = list.filter(
+        (d) =>
+          (d.name?.toLowerCase() || "").includes(search.toLowerCase()) ||
+          (d.specialization?.toLowerCase() || "").includes(search.toLowerCase())
       );
     }
 
     // Specialization filter
     if (selectedSpec) {
-      list = list.filter(d => d.specialization === selectedSpec);
+      list = list.filter((d) => d.specialization === selectedSpec);
     }
 
     // Experience filter
     if (selectedExperience !== "all") {
       const [min, max] = selectedExperience.split("-").map(Number);
-      list = list.filter(d => {
+      list = list.filter((d) => {
         const exp = d.experience || 0;
         if (max) return exp >= min && exp <= max;
         return exp >= min;
@@ -113,7 +138,7 @@ const PatientDoctor = () => {
     }
 
     // Price range filter
-    list = list.filter(d => {
+    list = list.filter((d) => {
       const fee = d.fee || 0;
       return fee >= priceRange[0] && fee <= priceRange[1];
     });
@@ -142,18 +167,24 @@ const PatientDoctor = () => {
   // Calculate stats
   const stats = {
     total: doctors.length,
-    available: doctors.filter(d => d.status === "APPROVED" || d.status === "ACTIVE").length,
-    avgRating: doctors.length > 0 
-      ? parseFloat((doctors.reduce((sum, d) => sum + (d.rating || 0), 0) / doctors.length).toFixed(1))
-      : 0
+    available: doctors.filter(
+      (d) => d.status === "APPROVED" || d.status === "ACTIVE"
+    ).length,
+    avgRating:
+      doctors.length > 0
+        ? parseFloat(
+            (
+              doctors.reduce((sum, d) => sum + (d.rating || 0), 0) /
+              doctors.length
+            ).toFixed(1)
+          )
+        : 0,
   };
 
   // Favorite toggle
   const toggleFavorite = (id) => {
-    setFavorites(prev => 
-      prev.includes(id) 
-        ? prev.filter(x => x !== id)
-        : [...prev, id]
+    setFavorites((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
@@ -162,7 +193,7 @@ const PatientDoctor = () => {
     try {
       const shareData = {
         title: `Dr. ${doctor.name} - ${doctor.specialization}`,
-        text: `Check out Dr. ${doctor.name}, ${doctor.specialization} specialist. Experience: ${doctor.experience} years, Fee: ${doctor.fee}৳`,
+        text: `Check out Dr. ${doctor.name}, ${doctor.specialization} specialist. Experience: ${doctor.experience} years, Fee: ${doctor.fee}$`,
         url: window.location.href,
       };
 
@@ -170,10 +201,10 @@ const PatientDoctor = () => {
         await navigator.share(shareData);
       } else {
         await navigator.clipboard.writeText(shareData.text);
-        alert('Doctor information copied to clipboard!');
+        alert("Doctor information copied to clipboard!");
       }
     } catch (err) {
-      console.error('Share error:', err);
+      console.error("Share error:", err);
     }
   };
 
@@ -190,7 +221,9 @@ const PatientDoctor = () => {
 
   const handleBookAppointment = () => {
     if (selectedDoctor) {
-      alert(`Appointment booked with ${selectedDoctor.name}! We'll contact you shortly.`);
+      alert(
+        `Appointment booked with ${selectedDoctor.name}! We'll contact you shortly.`
+      );
       closeBookingModal();
     }
   };
@@ -206,11 +239,11 @@ const PatientDoctor = () => {
       alert("No doctors available to export.");
       return;
     }
-    
+
     const dataStr = JSON.stringify(filteredDoctors, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
     link.download = `doctors-list.json`;
     document.body.appendChild(link);
@@ -229,7 +262,9 @@ const PatientDoctor = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-cyan-50 pt-24 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-600 mx-auto"></div>
-          <p className="text-lg font-semibold text-gray-700">Loading doctors...</p>
+          <p className="text-lg font-semibold text-gray-700">
+            Loading doctors...
+          </p>
         </div>
       </div>
     );
@@ -242,13 +277,15 @@ const PatientDoctor = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">Find Your Specialist</h1>
+              <h1 className="text-4xl font-bold text-gray-900">
+                Find Your Specialist
+              </h1>
               <p className="text-gray-600 mt-2">
-                {stats.total > 0 
-                  ? `Connect with ${stats.total}+ verified doctors` 
+                {stats.total > 0
+                  ? `Connect with ${stats.total}+ verified doctors`
                   : "No doctors available"}
               </p>
-              
+
               {stats.total > 0 && (
                 <div className="flex flex-wrap gap-6 mt-4">
                   <div className="flex items-center gap-2">
@@ -257,11 +294,15 @@ const PatientDoctor = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <Shield className="h-5 w-5 text-green-600" />
-                    <span className="font-semibold">{stats.available} Available</span>
+                    <span className="font-semibold">
+                      {stats.available} Available
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Star className="h-5 w-5 text-yellow-500" />
-                    <span className="font-semibold">{stats.avgRating}/5 Avg Rating</span>
+                    <span className="font-semibold">
+                      {stats.avgRating}/5 Avg Rating
+                    </span>
                   </div>
                 </div>
               )}
@@ -311,10 +352,10 @@ const PatientDoctor = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Filters */}
-        <DoctorFilters 
-          filters={filters} 
-          setFilters={setFilters} 
-          specializations={specializations} 
+        <DoctorFilters
+          filters={filters}
+          setFilters={setFilters}
+          specializations={specializations}
         />
 
         {/* Doctor Count */}
@@ -324,22 +365,26 @@ const PatientDoctor = () => {
               <span>No doctors found</span>
             ) : (
               <>
-                Showing <span className="font-bold">{filteredDoctors.length}</span> doctor{filteredDoctors.length !== 1 ? 's' : ''}
+                Showing{" "}
+                <span className="font-bold">{filteredDoctors.length}</span>{" "}
+                doctor{filteredDoctors.length !== 1 ? "s" : ""}
                 {filters.search && ` for "${filters.search}"`}
                 {filters.selectedSpec && ` in ${filters.selectedSpec}`}
               </>
             )}
           </p>
           <button
-            onClick={() => setFilters({
-              search: "",
-              selectedSpec: "",
-              selectedSort: "recommended",
-              selectedAvailability: "all",
-              selectedExperience: "all",
-              priceRange: [0, 5000],
-              viewMode: "grid"
-            })}
+            onClick={() =>
+              setFilters({
+                search: "",
+                selectedSpec: "",
+                selectedSort: "recommended",
+                selectedAvailability: "all",
+                selectedExperience: "all",
+                priceRange: [0, 5000],
+                viewMode: "grid",
+              })
+            }
             className="text-blue-600 hover:text-blue-800 text-sm"
           >
             Clear Filters
@@ -362,8 +407,12 @@ const PatientDoctor = () => {
             <div className="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
               <Users className="h-12 w-12 text-gray-400" />
             </div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">No Doctors Available</h3>
-            <p className="text-gray-600 mb-6">There are currently no doctors registered.</p>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">
+              No Doctors Available
+            </h3>
+            <p className="text-gray-600 mb-6">
+              There are currently no doctors registered.
+            </p>
             <button
               onClick={refreshData}
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -376,7 +425,7 @@ const PatientDoctor = () => {
 
       {/* Booking Modal */}
       {showBookingModal && selectedDoctor && (
-        <BookingModal 
+        <BookingModal
           doctor={selectedDoctor}
           onClose={closeBookingModal}
           onConfirm={handleBookAppointment}

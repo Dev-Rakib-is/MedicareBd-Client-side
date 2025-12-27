@@ -110,7 +110,7 @@ const DoctorCard = ({
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
             <h3 className="text-xl font-bold text-gray-900 mb-1">{doctor.name}</h3>
-            <p className="text-blue-600 font-semibold">{doctor.specialization}</p>
+            <p className="text-blue-600 font-semibold">{doctor.specialization?.name}</p>
           </div>
           <button
             onClick={() => handleExpand(doctor._id)}

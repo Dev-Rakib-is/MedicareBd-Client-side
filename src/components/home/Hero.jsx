@@ -43,6 +43,15 @@ const Hero = () => {
     fetchFeaturedDoctor();
   }, []);
 
+  // ✅ FIXED: Helper function to get specialization name
+  const getSpecializationName = (spec) => {
+    if (!spec) return "Medical Specialist";
+    if (typeof spec === 'object') {
+      return spec.name || "Medical Specialist";
+    }
+    return spec;
+  };
+
   const calculateRemainingDays = (featuredUntil) => {
     if (!featuredUntil) return "Featured";
     const now = new Date();
@@ -198,9 +207,10 @@ const Hero = () => {
                   <h3 className="text-xl font-bold text-gray-800 mb-2">
                     {featuredDoctor ? featuredDoctor.name : "Featured Doctor"}
                   </h3>
+                  {/* ✅ FIXED: specialization object থেকে name নিন */}
                   <p className="text-blue-600 font-medium mb-4">
                     {featuredDoctor
-                      ? featuredDoctor.specialization
+                      ? getSpecializationName(featuredDoctor.specialization)
                       : "Medical Specialist"}
                   </p>
 
@@ -216,8 +226,11 @@ const Hero = () => {
                         <span className="text-sm text-gray-600">
                           Available:
                         </span>
+                        {/* ✅ FIXED: workingHours object থেকে from/to নিন */}
                         <span className="text-green-600 font-bold">
-                          {featuredDoctor.visitingHours || "Check Schedule"}
+                          {featuredDoctor.workingHours 
+                            ? `${featuredDoctor.workingHours?.from || 'N/A'} - ${featuredDoctor.workingHours?.to || 'N/A'}`
+                            : "Check Schedule"}
                         </span>
                       </div>
                     </div>

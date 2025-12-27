@@ -14,7 +14,7 @@ const BookAppointment = ({ user }) => {
     email: '',
     phone: '',
     notes: '',
-    paymentMethod: 'CASH',
+    paymentMethod: 'Card',
   });
   const [loading, setLoading] = useState(false);
   const [doctor, setDoctor] = useState(null); 
@@ -51,7 +51,7 @@ const BookAppointment = ({ user }) => {
       if (!selectedDate || !doctorId) return;
       try {
         const token = localStorage.getItem('token');
-        const res = await api.get(`/doctors/${doctorId}/available-slots?date=${selectedDate}`, {
+        const res = await api.get(`/appointments/available-slots?doctor=${doctorId}&date=${selectedDate}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setAvailableSlots(res.data.slots || []); 
@@ -85,31 +85,69 @@ const BookAppointment = ({ user }) => {
     e.preventDefault();
     setLoading(true);
     try {
+      // ✅ FIXED: Backend-এর expected payload structure
       const payload = {
-        doctorId,
+        doctor: doctorId,
+        patient: user?._id || null, // যদি authenticated user থাকে
+        patientName: formData.name,
+        patientEmail: formData.email,
+        patientPhone: formData.phone,
         date: selectedDate,
-        timeSlot: selectedTime,
+        time: selectedTime, // বা timeSlot
+        status: 'PENDING',
         notes: formData.notes,
+        type: 'CONSULTATION',
+        // ✅ Payment structure backend অনুযায়ী
         payment: {
-          status: formData.paymentMethod === 'CASH' ? 'UNPAID' : 'PAID',
-          method: formData.paymentMethod
-        }
+          method: formData.paymentMethod,
+          status: formData.paymentMethod === 'CASH' ? 'PENDING' : 'PAID',
+          amount: doctor?.fee || 0
+        },
+        // ✅ Additional fields যা backend expects
+        appointmentType: 'GENERAL',
+        duration: 30, // মিনিটে
+        mode: 'IN_PERSON' // বা 'ONLINE'
       };
-      const token = localStorage.getItem('token');
-      await api.post(`/appointments/`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      alert('Appointment booked successfully!');
 
-      // Reset
-      setSelectedDate('');
-      setSelectedTime('');
-      setFormData({ name:'', email:'', phone:'', notes:'', paymentMethod:'CASH' });
-      setAvailableSlots([]);
+      const token = localStorage.getItem('token');
+      const response = await api.post(`/appointments`, payload, {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.data.success) {
+        alert('Appointment booked successfully!');
+        
+        // ✅ সফল হলে appointment ID সহ confirmation পেইজে redirect
+        const appointmentId = response.data.appointment?._id;
+        if (appointmentId) {
+          window.location.href = `/appointment-confirmed/${appointmentId}`;
+        }
+
+        // Reset form
+        setSelectedDate('');
+        setSelectedTime('');
+        setFormData({ 
+          name: '', 
+          email: '', 
+          phone: '', 
+          notes: '', 
+          paymentMethod: 'CASH' 
+        });
+        setAvailableSlots([]);
+        setStep(1);
+      } else {
+        throw new Error(response.data.message || 'Booking failed');
+      }
+
     } catch (err) {
-      console.error(err);
-      alert(err.response?.data?.message || 'Failed to book appointment');
-    } finally { setLoading(false); }
+      console.error('❌ Appointment booking error:', err);
+      alert(err.response?.data?.message || err.message || 'Failed to book appointment');
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   // Generate next 7 days
@@ -124,11 +162,33 @@ const BookAppointment = ({ user }) => {
     };
   });
 
+  // ✅ Helper: Doctor specialization name get
+  const getSpecializationName = (spec) => {
+    if (!spec) return "Doctor";
+    if (typeof spec === 'object') {
+      return spec.name || "Doctor";
+    }
+    return spec;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-12 px-4">
       <div className="max-w-6xl mx-auto mt-16">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Book Your Appointment</h1>
+          {doctor && (
+            <div className="inline-flex items-center gap-4 bg-white p-4 rounded-lg shadow">
+              <div className="text-left">
+                <h2 className="font-bold text-lg">{doctor.name}</h2>
+                <p className="text-blue-600">
+                  {getSpecializationName(doctor.specialization)}
+                </p>
+                <p className="text-gray-600 text-sm">
+                  Fee: ${doctor.fee || 0} • Rating: ⭐{doctor.rating || 4.5}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
@@ -149,10 +209,43 @@ const BookAppointment = ({ user }) => {
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 mb-8">
                 <h3 className="font-semibold text-lg mb-4">Appointment Summary</h3>
                 <div className="space-y-3">
-                  {doctor && <div className="flex justify-between"><span className="text-blue-200">Doctor</span><span className="font-medium">{doctor.name}</span></div>}
-                  {selectedDate && <div className="flex justify-between"><span className="text-blue-200">Date</span><span className="font-medium">{new Date(selectedDate).toLocaleDateString()}</span></div>}
-                  {selectedTime && <div className="flex justify-between"><span className="text-blue-200">Time</span><span className="font-medium">{selectedTime}</span></div>}
-                  {formData.paymentMethod && <div className="flex justify-between"><span className="text-blue-200">Payment</span><span className="font-medium">{formData.paymentMethod}</span></div>}
+                  {doctor && (
+                    <div className="flex justify-between">
+                      <span className="text-blue-200">Doctor</span>
+                      <span className="font-medium">{doctor.name}</span>
+                    </div>
+                  )}
+                  {selectedDate && (
+                    <div className="flex justify-between">
+                      <span className="text-blue-200">Date</span>
+                      <span className="font-medium">
+                        {new Date(selectedDate).toLocaleDateString('en-US', { 
+                          weekday: 'short', 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
+                      </span>
+                    </div>
+                  )}
+                  {selectedTime && (
+                    <div className="flex justify-between">
+                      <span className="text-blue-200">Time</span>
+                      <span className="font-medium">{selectedTime}</span>
+                    </div>
+                  )}
+                  {doctor && (
+                    <div className="flex justify-between">
+                      <span className="text-blue-200">Fee</span>
+                      <span className="font-medium">${doctor.fee || 0}</span>
+                    </div>
+                  )}
+                  {formData.paymentMethod && (
+                    <div className="flex justify-between">
+                      <span className="text-blue-200">Payment</span>
+                      <span className="font-medium">{formData.paymentMethod}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -162,61 +255,211 @@ const BookAppointment = ({ user }) => {
               <form onSubmit={handleSubmit}>
                 {/* Step 1: Date */}
                 {step===1 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {dates.map(d=>(
-                      <button type="button" key={d.full} onClick={()=>setSelectedDate(d.full)} className={`p-4 rounded-xl border-2 ${selectedDate===d.full?'border-blue-500 bg-blue-50 shadow-lg':'border-gray-200 hover:border-blue-300'}`}>
-                        <div className="text-center"><p className="text-gray-600 text-sm">{d.day}</p><p className="text-2xl font-bold text-gray-900 my-2">{d.date}</p><p className="text-gray-700">{d.month}</p></div>
-                      </button>
-                    ))}
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4">Select Appointment Date</h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {dates.map(d=>(
+                        <button 
+                          type="button" 
+                          key={d.full} 
+                          onClick={()=>setSelectedDate(d.full)}
+                          className={`p-4 rounded-xl border-2 transition-all ${
+                            selectedDate===d.full
+                              ? 'border-blue-500 bg-blue-50 shadow-lg' 
+                              : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                          }`}
+                        >
+                          <div className="text-center">
+                            <p className="text-gray-600 text-sm">{d.day}</p>
+                            <p className="text-2xl font-bold text-gray-900 my-2">{d.date}</p>
+                            <p className="text-gray-700">{d.month}</p>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
 
                 {/* Step 2: Time */}
                 {step===2 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {availableSlots.length ? availableSlots.map(t=>(
-                      <button type="button" key={t} onClick={()=>setSelectedTime(t)} className={`p-4 rounded-xl border-2 ${selectedTime===t?'border-blue-500 bg-blue-50 shadow-lg':'border-gray-200 hover:border-blue-300'}`}>
-                        <div className="text-center"><Clock className="w-6 h-6 mx-auto mb-2 text-gray-700" /><span className="font-medium text-gray-900">{t}</span></div>
-                      </button>
-                    )) : <p className="text-gray-500">No available slots for selected date</p>}
+                  <div>
+                    <h3 className="text-xl font-semibold mb-4">Select Time Slot</h3>
+                    {availableSlots.length > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        {availableSlots.map(t=>(
+                          <button 
+                            type="button" 
+                            key={t} 
+                            onClick={()=>setSelectedTime(t)}
+                            className={`p-4 rounded-xl border-2 transition-all ${
+                              selectedTime===t
+                                ? 'border-blue-500 bg-blue-50 shadow-lg' 
+                                : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                            }`}
+                          >
+                            <div className="text-center">
+                              <Clock className="w-6 h-6 mx-auto mb-2 text-gray-700" />
+                              <span className="font-medium text-gray-900">{t}</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Clock className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                        <p className="text-gray-500 text-lg">
+                          {selectedDate 
+                            ? "No available slots for selected date. Please choose another date."
+                            : "Please select a date first to see available time slots."
+                          }
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
 
                 {/* Step 3: Details */}
                 {step===3 && (
-                  <div className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <input type="text" name="name" value={formData.name} onChange={handleInputChange} placeholder="Full Name*" className="w-full px-4 py-3 border rounded-lg"/>
-                      <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} placeholder="Phone*" className="w-full px-4 py-3 border rounded-lg"/>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-6">Your Details</h3>
+                    <div className="space-y-6">
+                      <div className="grid md:grid-cols-2 gap-6">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
+                          <input 
+                            type="text" 
+                            name="name" 
+                            value={formData.name} 
+                            onChange={handleInputChange} 
+                            placeholder="Your full name"
+                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
+                          <input 
+                            type="tel" 
+                            name="phone" 
+                            value={formData.phone} 
+                            onChange={handleInputChange} 
+                            placeholder="Your phone number"
+                            className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            required
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                        <input 
+                          type="email" 
+                          name="email" 
+                          value={formData.email} 
+                          onChange={handleInputChange} 
+                          placeholder="Your email address"
+                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Notes (Optional)</label>
+                        <textarea 
+                          name="notes" 
+                          value={formData.notes} 
+                          onChange={handleInputChange} 
+                          placeholder="Any specific symptoms or notes for the doctor..."
+                          className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-32"
+                        />
+                      </div>
                     </div>
-                    <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="Email*" className="w-full px-4 py-3 border rounded-lg"/>
-                    <textarea name="notes" value={formData.notes} onChange={handleInputChange} placeholder="Notes (optional)" className="w-full px-4 py-3 border rounded-lg"/>
                   </div>
                 )}
 
                 {/* Step 4: Payment */}
                 {step===4 && (
-                  <div className="space-y-4">
-                    <label className="font-medium text-gray-700 flex items-center gap-2">
-                      <CreditCard className="w-5 h-5"/> Select Payment Method
-                    </label>
-                    <select name="paymentMethod" value={formData.paymentMethod} onChange={handleInputChange} className="w-full px-4 py-3 border rounded-lg">
-                      <option value="CASH">Cash</option>
-                      <option value="CARD">Card</option>
-                      <option value="BKASH">Bkash</option>
-                      <option value="NAGAD">Nagad</option>
-                      <option value="ROCKET">Rocket</option>
-                    </select>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-6">Payment Method</h3>
+                    <div className="space-y-4">
+                      <label className="font-medium text-gray-700 flex items-center gap-2 mb-4">
+                        <CreditCard className="w-5 h-5"/> Select Payment Method
+                      </label>
+                      <select 
+                        name="paymentMethod" 
+                        value={formData.paymentMethod} 
+                        onChange={handleInputChange} 
+                        className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="CASH">Cash (Pay at clinic)</option>
+                        <option value="CARD">Credit/Debit Card</option>
+                        <option value="BKASH">bKash</option>
+                        <option value="NAGAD">Nagad</option>
+                        <option value="ROCKET">Rocket</option>
+                        <option value="ONLINE">Online Payment</option>
+                      </select>
+                      
+                      {/* Payment Note */}
+                      <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <p className="text-sm text-yellow-800">
+                          {formData.paymentMethod === 'CASH' 
+                            ? 'You will pay the consultation fee at the clinic reception.'
+                            : 'You will be redirected to payment gateway after confirmation.'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 5: Confirmation (if needed) */}
+                {step===5 && (
+                  <div className="text-center py-8">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Check className="w-8 h-8 text-green-600" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-4">Confirm Appointment</h3>
+                    <p className="text-gray-600 mb-8">
+                      Please review your appointment details and confirm to book.
+                    </p>
                   </div>
                 )}
 
                 {/* Navigation */}
                 <div className="flex justify-between mt-12 pt-8 border-t border-gray-200">
-                  <button type="button" onClick={handleBack} disabled={step===1} className={`px-8 py-3 rounded-lg ${step===1?'text-gray-400 cursor-not-allowed':'hover:bg-gray-100'}`}>Back</button>
+                  <button 
+                    type="button" 
+                    onClick={handleBack} 
+                    disabled={step===1}
+                    className={`px-8 py-3 rounded-lg font-medium ${
+                      step===1 
+                        ? 'text-gray-400 cursor-not-allowed' 
+                        : 'text-gray-700 hover:bg-gray-100 border border-gray-300'
+                    }`}
+                  >
+                    Back
+                  </button>
                   
-                  {step<5?(
-                    <button type="button" onClick={handleNext} disabled={!isStepValid()} className={`px-8 py-3 rounded-lg ${isStepValid()?'bg-blue-600 text-white':'bg-gray-200 text-gray-500 cursor-not-allowed'}`}>Continue</button>
-                  ):(<button type="submit" disabled={loading} className="px-8 py-3 bg-green-600 text-white rounded-lg">{loading?'Booking...':'Confirm & Pay'}</button>)}
+                  {step < 5 ? (
+                    <button 
+                      type="button" 
+                      onClick={handleNext} 
+                      disabled={!isStepValid()}
+                      className={`px-8 py-3 rounded-lg font-medium ${
+                        isStepValid() 
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                          : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      {step === 4 ? 'Review & Confirm' : 'Continue'}
+                    </button>
+                  ) : (
+                    <button 
+                      type="submit" 
+                      disabled={loading}
+                      className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
+                    >
+                      {loading ? 'Booking...' : 'Confirm Appointment'}
+                    </button>
+                  )}
                 </div>
               </form>
             </div>
