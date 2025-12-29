@@ -8,7 +8,6 @@ import {
   CheckCircle,
   XCircle,
   DollarSign,
-  MoreVertical,
   FileText,
   ChevronRight
 } from "lucide-react";

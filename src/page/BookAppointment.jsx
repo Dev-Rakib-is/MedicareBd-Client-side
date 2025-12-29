@@ -51,10 +51,14 @@ const BookAppointment = ({ user }) => {
       if (!selectedDate || !doctorId) return;
       try {
         const token = localStorage.getItem('token');
-        const res = await api.get(`/appointments/available-slots?doctor=${doctorId}&date=${selectedDate}`, {
+        // ✅ সঠিক এন্ডপয়েন্ট ব্যবহার করুন
+        const res = await api.get(`/doctors/${doctorId}/available-slots`, {
+          params: { date: selectedDate },
           headers: { Authorization: `Bearer ${token}` }
         });
-        setAvailableSlots(res.data.slots || []); 
+        
+        // ✅ ব্যাকএন্ডের রেসপন্স অনুযায়ী স্লট সেট করুন
+        setAvailableSlots(res.data.slots || res.data.availableSlots || []); 
       } catch (err) {
         console.error(err);
         setAvailableSlots([]);
@@ -87,26 +91,13 @@ const BookAppointment = ({ user }) => {
     try {
       // ✅ FIXED: Backend-এর expected payload structure
       const payload = {
-        doctor: doctorId,
-        patient: user?._id || null, // যদি authenticated user থাকে
+        doctorId: doctorId, // ✅ এখানে doctorId পাঠানো দরকার
+        date: selectedDate,
+        timeSlot: selectedTime, // ✅ timeSlot নামে পাঠাতে হবে
         patientName: formData.name,
         patientEmail: formData.email,
         patientPhone: formData.phone,
-        date: selectedDate,
-        time: selectedTime, // বা timeSlot
-        status: 'PENDING',
-        notes: formData.notes,
-        type: 'CONSULTATION',
-        // ✅ Payment structure backend অনুযায়ী
-        payment: {
-          method: formData.paymentMethod,
-          status: formData.paymentMethod === 'CASH' ? 'PENDING' : 'PAID',
-          amount: doctor?.fee || 0
-        },
-        // ✅ Additional fields যা backend expects
-        appointmentType: 'GENERAL',
-        duration: 30, // মিনিটে
-        mode: 'IN_PERSON' // বা 'ONLINE'
+        notes: formData.notes
       };
 
       const token = localStorage.getItem('token');
@@ -286,20 +277,20 @@ const BookAppointment = ({ user }) => {
                     <h3 className="text-xl font-semibold mb-4">Select Time Slot</h3>
                     {availableSlots.length > 0 ? (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {availableSlots.map(t=>(
+                        {availableSlots.map(slot => (
                           <button 
                             type="button" 
-                            key={t} 
-                            onClick={()=>setSelectedTime(t)}
+                            key={slot.time || slot} 
+                            onClick={() => setSelectedTime(slot.time || slot)}
                             className={`p-4 rounded-xl border-2 transition-all ${
-                              selectedTime===t
+                              selectedTime === (slot.time || slot)
                                 ? 'border-blue-500 bg-blue-50 shadow-lg' 
                                 : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                             }`}
                           >
                             <div className="text-center">
                               <Clock className="w-6 h-6 mx-auto mb-2 text-gray-700" />
-                              <span className="font-medium text-gray-900">{t}</span>
+                              <span className="font-medium text-gray-900">{slot.time || slot}</span>
                             </div>
                           </button>
                         ))}
