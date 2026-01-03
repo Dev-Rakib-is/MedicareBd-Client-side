@@ -43,6 +43,7 @@ import { useFontSize } from "./contex/FontContext";
 import PrivacyPolicy from "./page/PrivacyPolicy";
 import CookiePolicy from "./page/CookiePolicy";
 import Disclaimer from "./page/Disclaimer";
+import AppointmentConfirmed from "./page/AppointmentConfirmed";
 
 function App() {
   const { user } = useAuth();
@@ -88,6 +89,14 @@ function App() {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/cookie-policy" element={<CookiePolicy />} />
           <Route path="/disclaimer" element={<Disclaimer />} />
+          <Route
+            path="/appointment-confirmed/:id"
+            element={<AppointmentConfirmed />}
+          />
+          <Route
+            path="/appointment/success/:id"
+            element={<AppointmentConfirmed />}
+          />
 
           <Route
             path="/prescriptions"

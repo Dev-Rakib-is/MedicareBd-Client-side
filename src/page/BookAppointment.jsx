@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // 🔥 React, useRef যোগ করুন
 import { useParams } from 'react-router-dom';
 import { Calendar, Clock, Check, CreditCard } from 'lucide-react';
 import api from '../api/api';
@@ -14,10 +14,11 @@ const BookAppointment = ({ user }) => {
     email: '',
     phone: '',
     notes: '',
-    paymentMethod: 'Card',
+    paymentMethod: 'CASH',
   });
   const [loading, setLoading] = useState(false);
-  const [doctor, setDoctor] = useState(null); 
+  const [doctor, setDoctor] = useState(null);
+  const formRef = useRef(null); // 🔥 React.useRef থেকে useRef করুন
 
   // Autofill login info
   useEffect(() => {
@@ -38,6 +39,9 @@ const BookAppointment = ({ user }) => {
       try {
         const res = await api.get(`/doctors/${doctorId}`);
         setDoctor(res.data.doctor);
+        
+        // Generate time slots based on doctor's working hours AND slotDuration
+        generateTimeSlots(res.data.doctor);
       } catch (err) {
         console.error("Failed to fetch doctor info", err);
       }
@@ -45,35 +49,68 @@ const BookAppointment = ({ user }) => {
     fetchDoctor();
   }, [doctorId]);
 
-  // Fetch available slots whenever date changes
+  // Generate time slots based on doctor's working hours AND slotDuration
+  const generateTimeSlots = (doctorData) => {
+    if (!doctorData || !doctorData.workingHours) return;
+    
+    const fromHour = parseInt(doctorData.workingHours.from || "9");
+    const toHour = parseInt(doctorData.workingHours.to || "5");
+    const slotDuration = doctorData.slotDuration || 15; // 🔥 Database থেকে slotDuration নিন
+    
+    console.log("Doctor slot duration:", slotDuration, "minutes");
+    
+    // 🔥 **YOUR DATABASE FORMAT**: from=9, to=5 (means 9 AM to 5 PM)
+    let startHour = fromHour;
+    let endHour = toHour;
+    
+    // If end hour is less than start hour, it's PM time
+    if (endHour < startHour) {
+      endHour += 12; // 5 -> 17 (5:00 PM)
+    }
+    
+    const slots = [];
+    
+    // Convert hours to minutes for calculation
+    const totalWorkingMinutes = (endHour - startHour) * 60;
+    const numberOfSlots = totalWorkingMinutes / slotDuration;
+    
+    for (let i = 0; i < numberOfSlots; i++) {
+      const slotMinutes = startHour * 60 + (i * slotDuration);
+      const hour = Math.floor(slotMinutes / 60);
+      const minute = slotMinutes % 60;
+      
+      // Format: 9:00, 9:15, 9:30, 9:45, 10:00, etc.
+      const timeString = `${hour}:${minute.toString().padStart(2, '0')}`;
+      slots.push(timeString);
+    }
+    
+    console.log(`Generated ${slots.length} slots with ${slotDuration} minutes interval`);
+    setAvailableSlots(slots);
+  };
+
+  // When date changes, regenerate slots
   useEffect(() => {
-    const fetchSlots = async () => {
-      if (!selectedDate || !doctorId) return;
-      try {
-        const token = localStorage.getItem('token');
-        // ✅ সঠিক এন্ডপয়েন্ট ব্যবহার করুন
-        const res = await api.get(`/doctors/${doctorId}/available-slots`, {
-          params: { date: selectedDate },
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        // ✅ ব্যাকএন্ডের রেসপন্স অনুযায়ী স্লট সেট করুন
-        setAvailableSlots(res.data.slots || res.data.availableSlots || []); 
-      } catch (err) {
-        console.error(err);
-        setAvailableSlots([]);
-      }
-    };
-    fetchSlots();
-  }, [selectedDate, doctorId]);
+    if (doctor) {
+      generateTimeSlots(doctor);
+    }
+  }, [selectedDate, doctor]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleNext = () => { if(step < 5) setStep(step + 1); };
-  const handleBack = () => { if(step > 1) setStep(step - 1); };
+  const handleNext = () => { 
+    if (step < 5) {
+      setStep(step + 1); 
+    }
+  };
+
+  const handleBack = () => { 
+    if (step > 1) {
+      setStep(step - 1); 
+    }
+  };
 
   const isStepValid = () => {
     switch(step) {
@@ -87,18 +124,32 @@ const BookAppointment = ({ user }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // 🔥 শুধুমাত্র Step 5-এ থাকলে Submit করতে দিবে
+    if (step !== 5) {
+      console.log(`Form submission blocked at step ${step}. Only allowed at step 5.`);
+      return;
+    }
+    
     setLoading(true);
     try {
-      // ✅ FIXED: Backend-এর expected payload structure
+      // ✅ ডাটাবেজ ফরম্যাট অনুযায়ী payload তৈরি করুন
       const payload = {
-        doctorId: doctorId, // ✅ এখানে doctorId পাঠানো দরকার
+        doctorId: doctorId,
         date: selectedDate,
-        timeSlot: selectedTime, // ✅ timeSlot নামে পাঠাতে হবে
-        patientName: formData.name,
-        patientEmail: formData.email,
-        patientPhone: formData.phone,
-        notes: formData.notes
+        timeSlot: selectedTime, // "9:00", "9:15", "9:30" format এ পাঠাবেন
+        reason: formData.notes || "General Consultation",
+        notes: formData.notes || "",
+        paymentMethod: formData.paymentMethod,
+        patientCountry: user?.country || "Bangladesh"
       };
+
+      // Mobile banking হলে transaction ID যোগ করুন
+      if (["BKASH", "NAGAD", "ROCKET"].includes(formData.paymentMethod)) {
+        payload.transactionId = "TRX_" + Date.now();
+      }
+
+      console.log("Sending payload:", payload);
 
       const token = localStorage.getItem('token');
       const response = await api.post(`/appointments`, payload, {
@@ -111,7 +162,6 @@ const BookAppointment = ({ user }) => {
       if (response.data.success) {
         alert('Appointment booked successfully!');
         
-        // ✅ সফল হলে appointment ID সহ confirmation পেইজে redirect
         const appointmentId = response.data.appointment?._id;
         if (appointmentId) {
           window.location.href = `/appointment-confirmed/${appointmentId}`;
@@ -134,10 +184,33 @@ const BookAppointment = ({ user }) => {
       }
 
     } catch (err) {
-      console.error('❌ Appointment booking error:', err);
-      alert(err.response?.data?.message || err.message || 'Failed to book appointment');
+      console.error('❌ Appointment booking error details:');
+      console.error('Status:', err.response?.status);
+      console.error('Error data:', err.response?.data);
+      console.error('Full error:', err);
+      
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.errors?.join(', ') || 
+                          err.message || 
+                          "Failed to book appointment";
+      
+      alert(`Error: ${errorMessage}`);
     } finally { 
       setLoading(false); 
+    }
+  };
+
+  // 🔥 Enter key press handle করার জন্য
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Enter key-এর default behavior বন্ধ করুন
+      
+      if (step < 5) {
+        handleNext(); // Enter প্রেস করলে Next step এ যাবে
+      } else if (step === 5) {
+        // শুধুমাত্র Step 5-এ Enter প্রেস করলে Submit হবে
+        // কিন্তু user নিজে ক্লিক করবে
+      }
     }
   };
 
@@ -153,13 +226,12 @@ const BookAppointment = ({ user }) => {
     };
   });
 
-  // ✅ Helper: Doctor specialization name get
-  const getSpecializationName = (spec) => {
-    if (!spec) return "Doctor";
-    if (typeof spec === 'object') {
-      return spec.name || "Doctor";
-    }
-    return spec;
+  // Helper to format time for display
+  const formatTimeDisplay = (time) => {
+    const [hour, minute] = time.split(':').map(Number);
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
   };
 
   return (
@@ -172,10 +244,19 @@ const BookAppointment = ({ user }) => {
               <div className="text-left">
                 <h2 className="font-bold text-lg">{doctor.name}</h2>
                 <p className="text-blue-600">
-                  {getSpecializationName(doctor.specialization)}
+                  {doctor.specialization?.name || doctor.specialization || "Doctor"}
                 </p>
                 <p className="text-gray-600 text-sm">
-                  Fee: ${doctor.fee || 0} • Rating: ⭐{doctor.rating || 4.5}
+                  Fee: ৳{doctor.fee || 0} • Rating: ⭐{doctor.rating || 4.5}
+                </p>
+                <p className="text-gray-600 text-sm mt-1">
+                  Working: {doctor.workingHours?.from || "9"}:00 - {doctor.workingHours?.to || "5"}:00
+                  {parseInt(doctor.workingHours?.to) < parseInt(doctor.workingHours?.from) && 
+                    <span className="text-blue-600 ml-2">(PM)</span>
+                  }
+                </p>
+                <p className="text-gray-600 text-sm">
+                  Slot Duration: {doctor.slotDuration || 15} minutes
                 </p>
               </div>
             </div>
@@ -222,13 +303,19 @@ const BookAppointment = ({ user }) => {
                   {selectedTime && (
                     <div className="flex justify-between">
                       <span className="text-blue-200">Time</span>
-                      <span className="font-medium">{selectedTime}</span>
+                      <span className="font-medium">{formatTimeDisplay(selectedTime)}</span>
+                    </div>
+                  )}
+                  {doctor && (
+                    <div className="flex justify-between">
+                      <span className="text-blue-200">Duration</span>
+                      <span className="font-medium">{doctor.slotDuration || 15} min</span>
                     </div>
                   )}
                   {doctor && (
                     <div className="flex justify-between">
                       <span className="text-blue-200">Fee</span>
-                      <span className="font-medium">${doctor.fee || 0}</span>
+                      <span className="font-medium">৳{doctor.fee || 0}</span>
                     </div>
                   )}
                   {formData.paymentMethod && (
@@ -243,7 +330,13 @@ const BookAppointment = ({ user }) => {
 
             {/* Right Panel */}
             <div className="md:w-2/3 p-8">
-              <form onSubmit={handleSubmit}>
+              {/* 🔥 Form এর onKeyDown ইভেন্ট যোগ করুন */}
+              <form 
+                ref={formRef}
+                onSubmit={handleSubmit}
+                onKeyDown={handleKeyDown}
+                id="appointment-form"
+              >
                 {/* Step 1: Date */}
                 {step===1 && (
                   <div>
@@ -271,39 +364,54 @@ const BookAppointment = ({ user }) => {
                   </div>
                 )}
 
-                {/* Step 2: Time */}
+                {/* Step 2: Time - 15 minutes slots */}
                 {step===2 && (
                   <div>
-                    <h3 className="text-xl font-semibold mb-4">Select Time Slot</h3>
-                    {availableSlots.length > 0 ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    <h3 className="text-xl font-semibold mb-4">Select Time Slot ({doctor?.slotDuration || 15} minutes each)</h3>
+                    
+                    {/* Working hours info */}
+                    {doctor && (
+                      <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                        <p className="text-sm text-blue-700">
+                          <strong>Available Time Slots:</strong> {formatTimeDisplay(`${doctor.workingHours?.from || "9"}:00`)} - {formatTimeDisplay(`${parseInt(doctor.workingHours?.to) < parseInt(doctor.workingHours?.from) ? parseInt(doctor.workingHours?.to) + 12 : doctor.workingHours?.to || "5"}:00`)}
+                          <br />
+                          <strong>Slot Duration:</strong> {doctor.slotDuration || 15} minutes • <strong>Total Slots:</strong> {availableSlots.length}
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Time slots - scrollable container for many slots */}
+                    <div className="max-h-96 overflow-y-auto pr-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                         {availableSlots.map(slot => (
                           <button 
                             type="button" 
-                            key={slot.time || slot} 
-                            onClick={() => setSelectedTime(slot.time || slot)}
-                            className={`p-4 rounded-xl border-2 transition-all ${
-                              selectedTime === (slot.time || slot)
-                                ? 'border-blue-500 bg-blue-50 shadow-lg' 
+                            key={slot} 
+                            onClick={() => setSelectedTime(slot)}
+                            className={`p-3 rounded-xl border-2 transition-all ${
+                              selectedTime === slot
+                                ? 'border-blue-500 bg-blue-50 shadow-md' 
                                 : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                             }`}
                           >
                             <div className="text-center">
-                              <Clock className="w-6 h-6 mx-auto mb-2 text-gray-700" />
-                              <span className="font-medium text-gray-900">{slot.time || slot}</span>
+                              <Clock className="w-5 h-5 mx-auto mb-1 text-gray-700" />
+                              <span className="font-medium text-gray-900 text-sm">
+                                {formatTimeDisplay(slot)}
+                              </span>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {slot}
+                              </p>
                             </div>
                           </button>
                         ))}
                       </div>
-                    ) : (
+                    </div>
+                    
+                    {availableSlots.length === 0 && (
                       <div className="text-center py-8">
                         <Clock className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-                        <p className="text-gray-500 text-lg">
-                          {selectedDate 
-                            ? "No available slots for selected date. Please choose another date."
-                            : "Please select a date first to see available time slots."
-                          }
-                        </p>
+                        <p className="text-gray-500">Please select a date to see available time slots</p>
                       </div>
                     )}
                   </div>
@@ -322,6 +430,13 @@ const BookAppointment = ({ user }) => {
                             name="name" 
                             value={formData.name} 
                             onChange={handleInputChange} 
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                // Enter প্রেস করলে phone ফিল্ডে focus করবে
+                                document.querySelector('input[name="phone"]')?.focus();
+                              }
+                            }}
                             placeholder="Your full name"
                             className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             required
@@ -333,7 +448,14 @@ const BookAppointment = ({ user }) => {
                             type="tel" 
                             name="phone" 
                             value={formData.phone} 
-                            onChange={handleInputChange} 
+                            onChange={handleInputChange}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                // Enter প্রেস করলে email ফিল্ডে focus করবে
+                                document.querySelector('input[name="email"]')?.focus();
+                              }
+                            }}
                             placeholder="Your phone number"
                             className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             required
@@ -346,7 +468,13 @@ const BookAppointment = ({ user }) => {
                           type="email" 
                           name="email" 
                           value={formData.email} 
-                          onChange={handleInputChange} 
+                          onChange={handleInputChange}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleNext(); // Enter প্রেস করলে Next step এ যাবে
+                            }
+                          }}
                           placeholder="Your email address"
                           className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           required
@@ -357,10 +485,18 @@ const BookAppointment = ({ user }) => {
                         <textarea 
                           name="notes" 
                           value={formData.notes} 
-                          onChange={handleInputChange} 
+                          onChange={handleInputChange}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && e.ctrlKey) {
+                              // Ctrl+Enter প্রেস করলে Next step এ যাবে
+                              e.preventDefault();
+                              handleNext();
+                            }
+                          }}
                           placeholder="Any specific symptoms or notes for the doctor..."
                           className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-32"
                         />
+                        <p className="text-xs text-gray-500 mt-1">Press Ctrl+Enter to go to next step</p>
                       </div>
                     </div>
                   </div>
@@ -371,13 +507,16 @@ const BookAppointment = ({ user }) => {
                   <div>
                     <h3 className="text-xl font-semibold mb-6">Payment Method</h3>
                     <div className="space-y-4">
-                      <label className="font-medium text-gray-700 flex items-center gap-2 mb-4">
-                        <CreditCard className="w-5 h-5"/> Select Payment Method
-                      </label>
                       <select 
                         name="paymentMethod" 
                         value={formData.paymentMethod} 
-                        onChange={handleInputChange} 
+                        onChange={handleInputChange}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleNext(); // Enter প্রেস করলে Next step এ যাবে
+                          }
+                        }}
                         className="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
                         <option value="CASH">Cash (Pay at clinic)</option>
@@ -385,32 +524,46 @@ const BookAppointment = ({ user }) => {
                         <option value="BKASH">bKash</option>
                         <option value="NAGAD">Nagad</option>
                         <option value="ROCKET">Rocket</option>
-                        <option value="ONLINE">Online Payment</option>
                       </select>
                       
-                      {/* Payment Note */}
-                      <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <p className="text-sm text-yellow-800">
-                          {formData.paymentMethod === 'CASH' 
-                            ? 'You will pay the consultation fee at the clinic reception.'
-                            : 'You will be redirected to payment gateway after confirmation.'
-                          }
-                        </p>
-                      </div>
+                      {formData.paymentMethod !== "CASH" && (
+                        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <p className="text-sm text-yellow-800">
+                            After confirming your appointment, you'll be redirected to the payment gateway to complete the payment.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {/* Step 5: Confirmation (if needed) */}
+                {/* Step 5: Confirmation - শুধুমাত্র এখানে Submit করতে দিবে */}
                 {step===5 && (
                   <div className="text-center py-8">
                     <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                       <Check className="w-8 h-8 text-green-600" />
                     </div>
                     <h3 className="text-2xl font-bold text-gray-900 mb-4">Confirm Appointment</h3>
-                    <p className="text-gray-600 mb-8">
-                      Please review your appointment details and confirm to book.
-                    </p>
+                    
+                    <div className="bg-gray-50 p-6 rounded-lg mb-8 text-left max-w-md mx-auto">
+                      <h4 className="font-semibold mb-4 border-b pb-2">Appointment Summary:</h4>
+                      <div className="space-y-2 text-sm">
+                        <p><strong>Doctor:</strong> {doctor?.name}</p>
+                        <p><strong>Date:</strong> {new Date(selectedDate).toLocaleDateString()}</p>
+                        <p><strong>Time:</strong> {selectedTime} ({formatTimeDisplay(selectedTime)})</p>
+                        <p><strong>Duration:</strong> {doctor?.slotDuration || 15} minutes</p>
+                        <p><strong>Fee:</strong> ৳{doctor?.fee || 0}</p>
+                        <p><strong>Payment:</strong> {formData.paymentMethod}</p>
+                        <p><strong>Notes:</strong> {formData.notes || "None"}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+                      <p className="text-blue-700 text-sm">
+                        Please click the <strong>Confirm Appointment</strong> button below to book your appointment.
+                        Pressing Enter will not submit the form.
+                      </p>
+                    </div>
                   </div>
                 )}
 
@@ -444,7 +597,8 @@ const BookAppointment = ({ user }) => {
                     </button>
                   ) : (
                     <button 
-                      type="submit" 
+                      type="button" // 🔥 type="button" করুন, type="submit" নয়
+                      onClick={handleSubmit} // 🔥 সরাসরি onClick হ্যান্ডলার যোগ করুন
                       disabled={loading}
                       className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium"
                     >
