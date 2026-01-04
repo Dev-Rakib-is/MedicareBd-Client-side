@@ -1,4 +1,3 @@
-// src/page/PatientDashboard.jsx
 import { useEffect, useState } from "react";
 import { useAuth } from "../../contex/AuthContex";
 import api from "../../api/api";
@@ -11,6 +10,10 @@ const PatientDashboard = () => {
   const [loadingDashboard, setLoadingDashboard] = useState(true);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [error, setError] = useState("");
+  
+  const [page, setPage] = useState(1);
+  const [limit] = useState(5); // appointments per page
+  const [totalAppointments, setTotalAppointments] = useState(0);
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -25,11 +28,12 @@ const PatientDashboard = () => {
       }
     };
 
-    const fetchRecentAppointments = async () => {
+    const fetchAppointments = async () => {
       try {
         setLoadingAppointments(true);
-        const res = await api.get("/patient/appointments");
+        const res = await api.get(`/appointments/patient?page=${page}&limit=${limit}`);
         setRecentAppointments(res.data.appointments);
+        setTotalAppointments(res.data.totalAppointments || 0);
       } catch (err) {
         setError(err.response?.data?.message || "Failed to load appointments");
       } finally {
@@ -38,12 +42,32 @@ const PatientDashboard = () => {
     };
 
     fetchDashboard();
-    fetchRecentAppointments();
-  }, []);
+    fetchAppointments();
+  }, [page, limit]);
+
+  // Cancel appointment
+  const handlePatientCancel = async (appointmentId) => {
+    try {
+      const res = await api.patch("/appointments/patient/cancel", { appointmentId });
+      setRecentAppointments((prev) =>
+        prev.map((appt) =>
+          appt._id === appointmentId
+            ? { ...appt, status: "CANCELLED", cancelledBy: "PATIENT", cancelReason: res.data.appointment.cancelReason || "" }
+            : appt
+        )
+      );
+    } catch (err) {
+      console.error("Error cancelling appointment:", err);
+    }
+  };
+
+  // Pagination controls
+  const totalPages = Math.ceil(totalAppointments / limit);
+  const handlePrevPage = () => setPage((prev) => Math.max(prev - 1, 1));
+  const handleNextPage = () => setPage((prev) => Math.min(prev + 1, totalPages));
 
   return (
     <div className="p-6 space-y-6 mt-16">
-
       <h1 className="text-2xl font-bold">
         Welcome, {user?.name || "Patient"}
       </h1>
@@ -93,16 +117,65 @@ const PatientDashboard = () => {
           )}
 
           {recentAppointments.map((appt) => (
-            <li key={appt._id} className="py-3 flex justify-between">
-              <span className="font-medium">
-                Dr. {appt.doctor?.name || "N/A"} — {appt.doctor?.specialization || "General"}
-              </span>
-              <span className="text-sm text-gray-500">
-                {appt.date ? new Date(appt.date).toLocaleDateString() : "N/A"}
-              </span>
+            <li key={appt._id} className="py-3 flex justify-between items-center">
+              <div>
+                <p className="font-medium">
+                  Dr. {appt.doctor?.name || "N/A"} — {appt.doctor?.specialization || "General"}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {appt.date ? new Date(appt.date).toLocaleDateString() : "N/A"}
+                </p>
+
+                {appt.status === "CANCELLED" && appt.cancelledBy && (
+                  <p className="text-sm text-red-500 mt-1">
+                    ❌ Cancelled by {appt.cancelledBy.toLowerCase()}
+                    {appt.cancelReason && ` — Reason: ${appt.cancelReason}`}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className={`text-xs px-2 py-1 rounded ${
+                  appt.status === "CANCELLED" ? "bg-red-100 text-red-700" :
+                  appt.status === "ACCEPTED" ? "bg-green-100 text-green-700" :
+                  "bg-gray-100 text-gray-700"
+                }`}>
+                  {appt.status}
+                </span>
+
+                {appt.status === "PENDING" && (
+                  <button
+                    onClick={() => handlePatientCancel(appt._id)}
+                    className="text-xs text-white bg-red-500 px-2 py-1 rounded hover:bg-red-600"
+                  >
+                    Cancel
+                  </button>
+                )}
+              </div>
             </li>
           ))}
         </ul>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-4 flex justify-end gap-2">
+            <button
+              onClick={handlePrevPage}
+              disabled={page === 1}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <span className="px-3 py-1 border rounded">{page} / {totalPages}</span>
+            <button
+              onClick={handleNextPage}
+              disabled={page === totalPages}
+              className="px-3 py-1 border rounded disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
