@@ -29,7 +29,7 @@ const DesktopSidebar = () => {
       { label: "Schedules", to: "/schedules" },
       { label: "Patients", to: "/patients" },
       { label: "Diagnosis", to: "/diagnosis" },
-      { label: "Prescription", to: "/prescription" },
+      { label: "Prescription", to: "/prescriptions" },
       { label: "Reports", to: "/reports" },
       { label: "Documents", to: "/documents" },
       { label: "Notifications", to: "/notifications" },

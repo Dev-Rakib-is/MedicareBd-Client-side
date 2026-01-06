@@ -23,7 +23,7 @@ import Invoice from "./page/Incoice";
 import Payroll from "./page/Payroll";
 import PatientsPage from "./page/PatientsPage";
 import PatientCases from "./page/PatientCases";
-import Prescriptions from "./page/Prescriptions";
+
 
 import Reports from "./page/Reports";
 
@@ -37,13 +37,14 @@ import PatientDoctor from "./components/doctor/PatientDoctor";
 import AdminDepartments from "./page/AdminDepartments";
 import TermsPage from "./page/TermsPage";
 import ProtectedRoute from "./components/ProtectedRoute";
-
 import { useAuth } from "./contex/AuthContex";
 import { useFontSize } from "./contex/FontContext";
 import PrivacyPolicy from "./page/PrivacyPolicy";
 import CookiePolicy from "./page/CookiePolicy";
 import Disclaimer from "./page/Disclaimer";
 import AppointmentConfirmed from "./page/AppointmentConfirmed";
+import Prescriptions from "./page/Prescriptions";
+
 
 function App() {
   const { user } = useAuth();
@@ -89,6 +90,7 @@ function App() {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/cookie-policy" element={<CookiePolicy />} />
           <Route path="/disclaimer" element={<Disclaimer />} />
+          <Route path="/schedules" element={<Disclaimer />} />
           <Route
             path="/appointment-confirmed/:id"
             element={<AppointmentConfirmed />}
@@ -97,18 +99,7 @@ function App() {
             path="/appointment/success/:id"
             element={<AppointmentConfirmed />}
           />
-
-          <Route
-            path="/prescriptions"
-            element={
-              user ? (
-                <Prescriptions patientId={user._id} />
-              ) : (
-                <Navigate to="/login" />
-              )
-            }
-          />
-
+          <Route path="/prescriptions" element={<Prescriptions/>}/>
           <Route
             path="/reports"
             element={

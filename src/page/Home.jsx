@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { motion } from "framer-motion";
 import { useAuth } from "../contex/AuthContex";
 import api from "../api/api";
 import Hero from "../components/home/Hero";

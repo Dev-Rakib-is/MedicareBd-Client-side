@@ -80,7 +80,7 @@ const doctorNav = [
   { label: "Appointment", to: "/appointment" },
   { label: "Doctors", to: "/doctors" },
   { label: "Schedules", to: "/schedules" },
-  { label: "Prescription", to: "/prescription" },
+  { label: "Prescription", to: "/prescriptions" },
   { label: "Documents", to: "/documents" },
   { label: "Diagnosis", to: "/diagnosis" },
   { label: "Notice Board", to: "/notice-board" },
