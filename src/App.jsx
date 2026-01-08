@@ -90,7 +90,6 @@ function App() {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/cookie-policy" element={<CookiePolicy />} />
           <Route path="/disclaimer" element={<Disclaimer />} />
-          <Route path="/schedules" element={<Disclaimer />} />
           <Route
             path="/appointment-confirmed/:id"
             element={<AppointmentConfirmed />}

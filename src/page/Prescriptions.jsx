@@ -7,7 +7,7 @@ import Unauthorized from "./Unauthorized";
 const Prescriptions = () => {
   const { user, loading } = useAuth();
   const [searchParams] = useSearchParams();
-  const patientId = searchParams.get("patientId"); // 👈 IMPORTANT
+  const patientId = searchParams.get("patientId");
 
   if (loading) return <p>Loading Prescription</p>;
   if (!user) return <Unauthorized />;

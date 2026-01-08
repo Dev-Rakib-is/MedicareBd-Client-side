@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../contex/AuthContex";
 import api from "../api/api";
+
 import Hero from "../components/home/Hero";
 import Features from "../components/home/Features";
 import HowItWorks from "../components/home/HowItWorks";
@@ -10,86 +11,72 @@ import CTA from "../components/home/CTA";
 import Footer from "../components/home/Footer";
 
 const Home = () => {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const navigate = useNavigate();
 
-  const banners = [
-    {
-      title: "Your Health, Our Priority",
-      subtitle: "Book appointments with verified doctors — anytime, anywhere.",
-      buttonText: "Book Appointment",
-      image: "https://i.ibb.co/JWx8M9jD/bannerbg.jpg",
-    },
-    {
-      title: "24/7 Emergency Services",
-      subtitle: "Our medical team is always ready to assist you.",
-      buttonText: "Contact Us",
-      image: "https://i.ibb.co/KzNbvXc2/24-7-medical-call.jpg",
-    },
-    {
-      title: "Expert Doctors",
-      subtitle: "Consult certified specialists online or offline.",
-      buttonText: "See Doctors",
-      image: "https://i.ibb.co/JWx8M9jD/bannerbg.jpg",
-    },
-  ];
-
-  const [current, setCurrent] = useState(0);
   const [doctors, setDoctors] = useState([]);
   const [specializations, setSpecializations] = useState([]);
   const [appointments, setAppointments] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [reports, setReports] = useState([]);
 
-
+  /* ================= FETCH DATA ================= */
   useEffect(() => {
+    if (loading) return;
+
     const fetchData = async () => {
       try {
-        const patientId = user?._id;
+        const requests = [
+          api.get("/doctors"),
+          api.get("/specializations"),
+        ];
 
-        const [docRes, specRes, apptRes, prescRes, reportRes] =
-          await Promise.all([
-            api.get("/doctors"),
-            api.get("/specializations"),
-            user ? api.get("/appointments/patient") : Promise.resolve({ data: { data: [] } }),
-            user ? api.get(`/prescriptions/${patientId}`) : Promise.resolve({ data: { data: [] } }),
-            user ? api.get(`/reports/${patientId}`) : Promise.resolve({ data: { data: [] } }),
-          ]);
+        // ROLE BASED REQUESTS
+        if (user?.role === "PATIENT") {
+          requests.push(api.get("/appointments/patient"));
+          requests.push(api.get(`/prescriptions/${user._id}`));
+          requests.push(api.get(`/reports/${user._id}`));
+        }
 
-        setDoctors(docRes.data?.doctors || []);
-        setSpecializations(specRes.data?.specializations || []);
-        setAppointments(apptRes.data?.data || []);
-        setPrescriptions(prescRes.data?.data || []);
-        setReports(reportRes.data?.data || []);
+        if (user?.role === "DOCTOR") {
+          requests.push(api.get("/appointments/doctor"));
+        }
+
+        const responses = await Promise.all(requests);
+
+        setDoctors(responses[0]?.data?.doctors || []);
+        setSpecializations(responses[1]?.data?.specializations || []);
+
+        if (user?.role === "PATIENT") {
+          setAppointments(responses[2]?.data?.data || []);
+          setPrescriptions(responses[3]?.data?.data || []);
+          setReports(responses[4]?.data?.data || []);
+        }
+
+        if (user?.role === "DOCTOR") {
+          setAppointments(responses[2]?.data?.data || []);
+        }
       } catch (err) {
-        console.error("Home fetch error", err);
+        console.error("Home fetch error:", err);
       }
     };
 
     fetchData();
-  }, [user]);
+  }, [user, loading]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrent((prev) => (prev === banners.length - 1 ? 0 : prev + 1));
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
+  /* ================= HANDLER ================= */
   const handleButton = () => {
     navigate(user ? "/doctor-details" : "/login");
   };
 
- 
-
   return (
-    <div className="container mx-auto px-4 mt-16 space-y-10">    
-     <Hero/>
-     <Features/>
-     <HowItWorks/>
-     <Testimonials/>
-     <CTA/>
-     <Footer/>
+    <div className="container mx-auto px-4 mt-16 space-y-10">
+      <Hero onAction={handleButton} />
+      <Features />
+      <HowItWorks />
+      <Testimonials />
+      <CTA />
+      <Footer />
     </div>
   );
 };

@@ -33,15 +33,16 @@ const AdminDoctors = () => {
     setLoading(true);
     try {
       const res = await api.get("/doctors/admin/all");
+      console.log("API Response:", res.data);
       if (res.data?.success) setDoctors(res.data.doctors);
     } catch (err) {
-      console.log("Error", "Failed to load doctors.", "error",err);
+      console.log("Error", "Failed to load doctors.", "error", err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Search filter specialization 
+  // Search filter specialization
   const filteredDoctors = doctors.filter((d) => {
     const q = search.toLowerCase().trim();
     const specializationName =
@@ -65,8 +66,7 @@ const AdminDoctors = () => {
     });
     if (!confirm.isConfirmed) return;
 
-    try
-     {
+    try {
       const endpoint =
         status === "APPROVED"
           ? `/doctors/admin/approve/${id}`
@@ -449,7 +449,9 @@ const AdminDoctors = () => {
                   <div className="flex items-center gap-3">
                     <Mail size={20} className="text-gray-400" />
                     <span className="font-medium">Email:</span>
-                    <p>{selectedDoctor.user?.email || "N/A"}</p>
+                    <p>
+                      {selectedDoctor.email || "N/A"}
+                    </p>
                   </div>
                   <div className="flex items-center gap-3">
                     <Phone size={20} className="text-gray-400" />

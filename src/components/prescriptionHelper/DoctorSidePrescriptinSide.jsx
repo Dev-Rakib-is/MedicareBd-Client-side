@@ -148,7 +148,7 @@ const DoctorSidePrescriptinSide = ({ patientId }) => {
   };
 
   if (!patientId) {
-    return <p className="text-red-500">Patient ID missing</p>;
+    return <p className="text-red-500 mt-18">Patient ID missing</p>;
   }
 
   if (!user || user.role !== "DOCTOR") {
