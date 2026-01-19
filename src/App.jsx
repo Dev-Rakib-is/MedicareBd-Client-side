@@ -44,6 +44,7 @@ import CookiePolicy from "./page/CookiePolicy";
 import Disclaimer from "./page/Disclaimer";
 import AppointmentConfirmed from "./page/AppointmentConfirmed";
 import Prescriptions from "./page/Prescriptions";
+import Schedule from "./page/Schedule";
 
 
 function App() {
@@ -58,7 +59,6 @@ function App() {
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/users" element={<AdminUsers />} />
-
           <Route path="/unauthorized" element={<Unauthorized />} />
           <Route path="/login" element={<Login />} />
           <Route path="/registration" element={<Registration />} />
@@ -90,6 +90,7 @@ function App() {
           <Route path="/privacy-policy" element={<PrivacyPolicy />} />
           <Route path="/cookie-policy" element={<CookiePolicy />} />
           <Route path="/disclaimer" element={<Disclaimer />} />
+          <Route path="/schedules" element={<Schedule />} />
           <Route
             path="/appointment-confirmed/:id"
             element={<AppointmentConfirmed />}

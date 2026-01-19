@@ -27,7 +27,7 @@ const PatientAppointment = () => {
     try {
       setLoading(true);
       setError("");
-      const res = await api.get("/appointments/patient");
+      const res = await api.get("/appointments/doctor");
       setAppointments(res.data.appointments || []);
     } catch (err) {
       console.error("Fetch appointments error:", err);

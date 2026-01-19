@@ -1,5 +1,4 @@
-
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "../api/api"; 
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -9,17 +8,17 @@ import {
   Trash2,
   Video,
   MessageCircle,
-  XCircle,
   CheckCircle,
   Filter,
 } from "lucide-react";
 import PatientDetailsModal from "../components/patients/PatientDetailsModal";
-import AddPatientModal from "../components/patients/PatientDetailsModal";
+import AddPatientModal from "../components/patients/PatientDetailsModal"; 
 
 const PAGE_SIZE = 8;
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState([]);
+  const [totalPatients, setTotalPatients] = useState(0); // total for pagination
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
@@ -45,9 +44,13 @@ export default function PatientsPage() {
       q.set("tab", tab);
       q.set("page", page);
       q.set("limit", PAGE_SIZE);
-      const res = await api.get(`/patient/my?${q.toString()}`);
-      // expect { patients: [], total, page, limit }
-      setPatients(res.data.patients || []);
+
+      const res = await api.get(`/doctors/my-patients?${q.toString()}`);
+      
+      // backend response { success, count, data }
+      const data = res.data.data || [];
+      setPatients(data);
+      setTotalPatients(res.data.count || data.length);
     } catch (err) {
       console.error(err);
       setError(err.response?.data?.message || "Failed to load patients");
@@ -57,9 +60,8 @@ export default function PatientsPage() {
   }
 
   const totalPages = useMemo(() => {
-    // if backend returns total, use it; fallback estimate
-    return Math.max(1, Math.ceil((patients?.total || patients.length) / PAGE_SIZE));
-  }, [patients]);
+    return Math.max(1, Math.ceil(totalPatients / PAGE_SIZE));
+  }, [totalPatients]);
 
   // optimistic remove
   async function handleRemovePatient(patientId) {
@@ -69,6 +71,7 @@ export default function PatientsPage() {
     try {
       await api.delete(`/patient/${patientId}`);
       toast.success("Patient removed");
+      setTotalPatients((t) => t - 1);
     } catch (err) {
       setPatients(prev);
       toast.error("Failed to remove patient");
@@ -80,17 +83,10 @@ export default function PatientsPage() {
   }
 
   async function handleStartConsultation(patientId, mode = "video") {
-
     try {
-      // try REST call (optional) to create consultation or use sockets
-      const res = await api.post("/consultations/start", {
-        patientId,
-        mode,
-      });
-      // open new page / show modal / navigate
+      const res = await api.post("/consultations/start", { patientId, mode });
       const consultation = res.data.consultation;
-      // redirect client to consultation page where live component connects sockets
-      window.location.href = `/consultation/${consultation._id}`; // adjust route
+      window.location.href = `/consultation/${consultation._id}`;
     } catch (err) {
       console.error(err);
       toast.error("Could not start consultation. Check server.");
@@ -152,7 +148,6 @@ export default function PatientsPage() {
           >
             <option value="all">All roles</option>
             <option value="patient">Patient</option>
-            {/* add others if needed */}
           </select>
         </div>
       </div>
@@ -173,73 +168,71 @@ export default function PatientsPage() {
         ) : patients.length === 0 ? (
           <div className="p-6 text-center text-gray-500">No patients found.</div>
         ) : (
-          <>
-            {patients.map((p) => (
-              <div key={p._id} className="grid grid-cols-12 gap-3 px-4 py-3 items-center border-b hover:bg-gray-50">
-                <div className="col-span-5 flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm">
-                    {p.name?.[0] || "?"}
-                  </div>
-                  <div>
-                    <div className="font-medium">{p.name || "N/A"}</div>
-                    <div className="text-sm text-gray-500">{p.age ? `${p.age} yrs` : ""} {p.city ? `• ${p.city}` : ""}</div>
-                  </div>
+          patients.map((p) => (
+            <div key={p._id} className="grid grid-cols-12 gap-3 px-4 py-3 items-center border-b hover:bg-gray-50">
+              <div className="col-span-5 flex items-center gap-3">
+                <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-sm">
+                  {p.name?.[0] || "?"}
                 </div>
-                <div className="col-span-3 text-sm text-gray-600">
-                  {p.lastVisit ? new Date(p.lastVisit).toLocaleDateString() : "—"}
-                </div>
-                <div className="col-span-2">
-                  {p.online ? (
-                    <span className="inline-flex items-center gap-1 text-green-600"><CheckCircle size={14}/> Online</span>
-                  ) : (
-                    <span className="text-gray-500">Offline</span>
-                  )}
-                </div>
-
-                <div className="col-span-2 flex justify-end gap-2">
-                  <button
-                    title="Open details"
-                    onClick={() => handleOpenDetails(p)}
-                    className="px-2 py-1 border rounded"
-                  >
-                    View
-                  </button>
-
-                  <div className="flex items-center gap-1">
-                    <button
-                      title="Chat"
-                      onClick={() => handleStartConsultation(p._id, "chat")}
-                      className="px-2 py-1 rounded border hover:bg-gray-50"
-                    >
-                      <MessageCircle size={16} />
-                    </button>
-
-                    <button
-                      title="Start video"
-                      onClick={() => handleStartConsultation(p._id, "video")}
-                      className="px-2 py-1 rounded border bg-blue-600 text-white"
-                    >
-                      <Video size={16} />
-                    </button>
-
-                    <button
-                      title="Remove"
-                      onClick={() => handleRemovePatient(p._id)}
-                      className="px-2 py-1 rounded border text-red-600"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+                <div>
+                  <div className="font-medium">{p.name || "N/A"}</div>
+                  <div className="text-sm text-gray-500">{p.age ? `${p.age} yrs` : ""} {p.city ? `• ${p.city}` : ""}</div>
                 </div>
               </div>
-            ))}
-          </>
+              <div className="col-span-3 text-sm text-gray-600">
+                {p.lastVisit ? new Date(p.lastVisit).toLocaleDateString() : "—"}
+              </div>
+              <div className="col-span-2">
+                {p.online ? (
+                  <span className="inline-flex items-center gap-1 text-green-600"><CheckCircle size={14}/> Online</span>
+                ) : (
+                  <span className="text-gray-500">Offline</span>
+                )}
+              </div>
+
+              <div className="col-span-2 flex justify-end gap-2">
+                <button
+                  title="Open details"
+                  onClick={() => handleOpenDetails(p)}
+                  className="px-2 py-1 border rounded"
+                >
+                  View
+                </button>
+
+                <div className="flex items-center gap-1">
+                  <button
+                    title="Chat"
+                    onClick={() => handleStartConsultation(p._id, "chat")}
+                    className="px-2 py-1 rounded border hover:bg-gray-50"
+                  >
+                    <MessageCircle size={16} />
+                  </button>
+
+                  <button
+                    title="Start video"
+                    onClick={() => handleStartConsultation(p._id, "video")}
+                    className="px-2 py-1 rounded border bg-blue-600 text-white"
+                  >
+                    <Video size={16} />
+                  </button>
+
+                  <button
+                    title="Remove"
+                    onClick={() => handleRemovePatient(p._id)}
+                    className="px-2 py-1 rounded border text-red-600"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
         )}
       </div>
 
       {/* pagination controls */}
       <div className="flex justify-between items-center mt-4">
-        <div className="text-sm text-gray-600">Page {page}</div>
+        <div className="text-sm text-gray-600">Page {page} of {totalPages}</div>
         <div className="flex gap-2">
           <button
             onClick={() => setPage((s) => Math.max(1, s - 1))}
@@ -249,8 +242,9 @@ export default function PatientsPage() {
             Prev
           </button>
           <button
-            onClick={() => setPage((s) => s + 1)}
+            onClick={() => setPage((s) => Math.min(totalPages, s + 1))}
             className="px-3 py-1 border rounded"
+            disabled={page >= totalPages}
           >
             Next
           </button>
