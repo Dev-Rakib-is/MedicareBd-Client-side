@@ -13,7 +13,7 @@ const AdminUsers = () => {
   const [successMessage, setSuccessMessage] = useState("");
   const [error, setError] = useState(null);
 
-  //  Socket.io real-time updates
+  // Socket.io real-time updates
   useEffect(() => {
     socket.on('user-online', (data) => {
       setUsers(prev => prev.map(user => 
@@ -33,43 +33,72 @@ const AdminUsers = () => {
     };
   }, []);
 
-  useEffect(() => { fetchUsers(); }, []);
+  useEffect(() => { 
+    fetchUsers(); 
+  }, []);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await api.get("/admin/users");
-      setUsers(res.data);
+      // Ensure response data is an array
+      if (Array.isArray(res.data)) {
+        setUsers(res.data);
+      } else if (res.data && Array.isArray(res.data.users)) {
+        // If data is nested in a users property
+        setUsers(res.data.users);
+      } else if (res.data && typeof res.data === 'object') {
+        // If it's an object, convert to array
+        setUsers(Object.values(res.data));
+      } else {
+        setUsers([]);
+        console.error("Unexpected API response format:", res.data);
+      }
     } catch (err) {
       setError(err.response?.data?.message || "Failed to fetch users");
+      setUsers([]); // Set to empty array on error
     } finally {
       setLoading(false);
     }
   }, []);
 
   const handleAction = async (type, id) => {
-    if (!selectedUser) return;
+    if (!selectedUser || !id) return;
     setLoading(true);
+    setError(null);
+    setSuccessMessage("");
+    
     try {
-      if (type === "block") await api.patch(`/admin/users/block/${id}`);
-      else if (type === "unblock") await api.patch(`/admin/users/unblock/${id}`);
-      else if (type === "delete") await api.delete(`/admin/user/${id}`);
-
+      let response;
+      if (type === "block") {
+        response = await api.patch(`/admin/users/block/${id}`);
+      } else if (type === "unblock") {
+        response = await api.patch(`/admin/users/unblock/${id}`);
+      } else if (type === "delete") {
+        response = await api.delete(`/admin/user/${id}`);
+      }
+      
       setSuccessMessage(`User ${type}ed successfully`);
       setTimeout(() => setSuccessMessage(""), 3000);
 
       setActionType(null);
       setSelectedUser(null);
       fetchUsers();
+      
       if (type === "block") setFilterType("blocked");
       if (type === "unblock") setFilterType("online");
     } catch (err) {
       setError(err.response?.data?.message || "Action failed");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const filteredUsers = useMemo(() => {
+    // Ensure users is an array before filtering
+    if (!Array.isArray(users)) return [];
+    
     return users.filter(u => {
       const matchesSearch =
         (u.name?.toLowerCase() || "").includes(search.toLowerCase()) ||
@@ -77,28 +106,33 @@ const AdminUsers = () => {
       
       // ✅ NEW FILTER LOGIC WITH ONLINE STATUS
       if (filterType === "online") {
-        return matchesSearch && u.isOnline === true && u.isBlocked === false;
+        return matchesSearch && u.isOnline === true && u.isBlocked !== true;
       }
       if (filterType === "offline") {
-        return matchesSearch && u.isOnline === false && u.isBlocked === false;
+        return matchesSearch && u.isOnline !== true && u.isBlocked !== true;
       }
       if (filterType === "blocked") {
         return matchesSearch && u.isBlocked === true;
       }
       if (filterType === "active") {
-        return matchesSearch && u.isBlocked === false; // Legacy active (unblocked)
+        return matchesSearch && u.isBlocked !== true; // Legacy active (unblocked)
       }
       return matchesSearch; // "all"
     });
   }, [users, search, filterType]);
 
-  const userCounts = useMemo(() => ({
-    all: users.length,
-    online: users.filter(u => u.isOnline === true && u.isBlocked === false).length,
-    offline: users.filter(u => u.isOnline === false && u.isBlocked === false).length,
-    blocked: users.filter(u => u.isBlocked === true).length,
-    active: users.filter(u => !u.isBlocked).length
-  }), [users]);
+  const userCounts = useMemo(() => {
+    // Ensure users is an array
+    const userArray = Array.isArray(users) ? users : [];
+    
+    return {
+      all: userArray.length,
+      online: userArray.filter(u => u.isOnline === true && u.isBlocked !== true).length,
+      offline: userArray.filter(u => u.isOnline !== true && u.isBlocked !== true).length,
+      blocked: userArray.filter(u => u.isBlocked === true).length,
+      active: userArray.filter(u => u.isBlocked !== true).length
+    };
+  }, [users]);
 
   const ActionModal = ({ isOpen, onClose, title, message, onConfirm, confirmText, confirmColor }) => {
     if (!isOpen) return null;
@@ -207,15 +241,19 @@ const AdminUsers = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.length===0 ? (
-                  <tr><td colSpan={5} className="py-8 text-center text-gray-500">No users found</td></tr>
+                {!Array.isArray(filteredUsers) || filteredUsers.length===0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 text-center text-gray-500">
+                      No users found
+                    </td>
+                  </tr>
                 ) : filteredUsers.map((u,i)=>(
-                  <tr key={u._id} className={`transition rounded-lg ${i%2===0?"bg-white":"bg-gray-50"} hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100`}>
-                    <td className="py-4 px-6">{u.name}</td>
-                    <td className="py-4 px-6">{u.email}</td>
+                  <tr key={u._id || i} className={`transition rounded-lg ${i%2===0?"bg-white":"bg-gray-50"} hover:bg-gradient-to-r hover:from-blue-50 hover:to-blue-100`}>
+                    <td className="py-4 px-6">{u.name || "N/A"}</td>
+                    <td className="py-4 px-6">{u.email || "N/A"}</td>
                     <td className="py-4 px-6">
                       <span className={`px-3 py-1 rounded-full text-white text-sm font-semibold ${u.role==="ADMIN"?"bg-red-600":u.role==="DOCTOR"?"bg-blue-600":"bg-green-600"}`}>
-                        {u.role}
+                        {u.role || "USER"}
                       </span>
                     </td>
                     <td className="py-4 px-6">
@@ -234,7 +272,7 @@ const AdminUsers = () => {
               </tbody>
             </table>
             <div className="mt-4 pt-4 border-t text-sm text-gray-600 px-6 pb-4">
-              Showing <span className="font-semibold">{filteredUsers.length}</span> of <span className="font-semibold">{userCounts.all}</span> users
+              Showing <span className="font-semibold">{Array.isArray(filteredUsers) ? filteredUsers.length : 0}</span> of <span className="font-semibold">{userCounts.all}</span> users
               {search && ` matching "${search}"`}
               <div className="text-xs mt-1">
                 Online: {userCounts.online} | Offline: {userCounts.offline} | Blocked: {userCounts.blocked}
@@ -251,15 +289,15 @@ const AdminUsers = () => {
             <button className="absolute top-3 right-3 text-gray-500 hover:text-gray-700 p-1" onClick={()=>setSelectedUser(null)} disabled={loading}>✖</button>
             <h2 className="text-2xl font-semibold mb-4">User Details</h2>
             <div className="space-y-3">
-              <p><strong>Name:</strong> {selectedUser.name}</p>
-              <p><strong>Email:</strong> {selectedUser.email}</p>
-              <p><strong>Role:</strong> {selectedUser.role}</p>
+              <p><strong>Name:</strong> {selectedUser.name || "N/A"}</p>
+              <p><strong>Email:</strong> {selectedUser.email || "N/A"}</p>
+              <p><strong>Role:</strong> {selectedUser.role || "USER"}</p>
               <p><strong>Status:</strong> <StatusBadge isBlocked={selectedUser.isBlocked} isOnline={selectedUser.isOnline} /></p>
               <p><strong>Online Status:</strong> {selectedUser.isOnline ? "🟢 Currently Online" : "⚫ Currently Offline"}</p>
               {selectedUser.lastActive && (
                 <p><strong>Last Active:</strong> {new Date(selectedUser.lastActive).toLocaleString()}</p>
               )}
-              <p className="text-xs text-gray-500"><strong>User ID:</strong> {selectedUser._id}</p>
+              <p className="text-xs text-gray-500"><strong>User ID:</strong> {selectedUser._id || "N/A"}</p>
             </div>
           </div>
         </div>

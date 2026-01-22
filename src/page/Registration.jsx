@@ -16,7 +16,7 @@ const Registration = () => {
             Create Your Account
           </h1>
           <p className="text-gray-600">
-            Join thousands of users on MediCareBD
+            Join thousands of users on MediCare
           </p>
         </div>
 

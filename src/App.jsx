@@ -24,7 +24,6 @@ import Payroll from "./page/Payroll";
 import PatientsPage from "./page/PatientsPage";
 import PatientCases from "./page/PatientCases";
 
-
 import Reports from "./page/Reports";
 
 import AdminLogin from "./page/AdminLogin";
@@ -45,7 +44,7 @@ import Disclaimer from "./page/Disclaimer";
 import AppointmentConfirmed from "./page/AppointmentConfirmed";
 import Prescriptions from "./page/Prescriptions";
 import Schedule from "./page/Schedule";
-
+import AdminPayments from "./page/AdminPayments";
 
 function App() {
   const { user } = useAuth();
@@ -91,6 +90,7 @@ function App() {
           <Route path="/cookie-policy" element={<CookiePolicy />} />
           <Route path="/disclaimer" element={<Disclaimer />} />
           <Route path="/schedules" element={<Schedule />} />
+          <Route path="/admin/payments" element={<AdminPayments />} />
           <Route
             path="/appointment-confirmed/:id"
             element={<AppointmentConfirmed />}
@@ -99,7 +99,7 @@ function App() {
             path="/appointment/success/:id"
             element={<AppointmentConfirmed />}
           />
-          <Route path="/prescriptions" element={<Prescriptions/>}/>
+          <Route path="/prescriptions" element={<Prescriptions />} />
           <Route
             path="/reports"
             element={

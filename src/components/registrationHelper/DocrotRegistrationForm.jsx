@@ -108,22 +108,21 @@ export default function DoctorRegistrationForm() {
       formDataToSend.append("registrationNumber", formData.registrationNumber);
       formDataToSend.append("fee", formData.fee);
       formDataToSend.append("termsAccepted", formData.termsAccepted.toString());
-      formDataToSend.append("role", "DOCTOR"); 
 
       // Working days & hours as JSON
       formDataToSend.append(
         "workingDays",
-        JSON.stringify(formData.workingDays)
+        JSON.stringify(formData.workingDays),
       );
       formDataToSend.append(
         "workingHours",
-        JSON.stringify(formData.workingHours)
+        JSON.stringify(formData.workingHours),
       );
 
       // Photo
       if (formData.photo) formDataToSend.append("photo", formData.photo);
 
-      await api.post("/doctors/register", formDataToSend, {
+      await api.post("/auth/register/doctor", formDataToSend, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
@@ -145,7 +144,7 @@ export default function DoctorRegistrationForm() {
       setError(
         err.response?.data?.message ||
           err.response?.data?.error ||
-          "Registration failed. Please try again."
+          "Registration failed. Please try again.",
       );
     } finally {
       setLoading(false);
