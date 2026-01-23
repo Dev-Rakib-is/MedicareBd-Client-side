@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import api from "../api/api";
-import DepartmentFilters from "../components/AdminDepartments/DepartmentFilters";
-import DepartmentTable from "../components/AdminDepartments/DepartmentTable";
-import AddDepartmentModal from "../components/AdminDepartments/AddDepartmentModal";
+import DepartmentFilters from "../components/adminDepartments/DepartmentFilters";
+import DepartmentTable from "../components/adminDepartments/DepartmentTable";
+import AddDepartmentModal from "../components/adminDepartments/AddDepartmentModal";
 import { Building, Plus } from "lucide-react";
 import Swal from "sweetalert2";
 

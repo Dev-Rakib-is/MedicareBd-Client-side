@@ -91,6 +91,8 @@ function App() {
           <Route path="/disclaimer" element={<Disclaimer />} />
           <Route path="/schedules" element={<Schedule />} />
           <Route path="/admin/payments" element={<AdminPayments />} />
+          <Route path="/admin/reports" element={<AdminPayments />} />
+
           <Route
             path="/appointment-confirmed/:id"
             element={<AppointmentConfirmed />}
