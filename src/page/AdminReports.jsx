@@ -1,51 +1,114 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+} from "recharts";
+
+const StatCard = ({ title, value }) => (
+  <div className="p-4 rounded-xl shadow bg-background">
+    <p className="text-sm text-muted-foreground">{title}</p>
+    <p className="text-xl font-semibold mt-1">{value}</p>
+  </div>
+);
 
 export default function AdminReports() {
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [range, setRange] = useState("30"); // 7 | 30
+
   const [revenueData, setRevenueData] = useState([]);
   const [appointmentData, setAppointmentData] = useState([]);
   const [summary, setSummary] = useState({});
+  const [doctors, setDoctors] = useState([]);
+  const [departments, setDepartments] = useState([]);
 
   useEffect(() => {
-    // simulate backend fetch
+    setLoading(true);
+    setError(null);
+
+    // simulate backend fetch by range
     setTimeout(() => {
-      setRevenueData([
-        { month: "Jan", revenue: 40000 },
-        { month: "Feb", revenue: 55000 },
-        { month: "Mar", revenue: 70000 },
-        { month: "Apr", revenue: 62000 },
-      ]);
+      try {
+        setRevenueData(
+          range === "7"
+            ? [
+                { month: "Mon", revenue: 12000 },
+                { month: "Tue", revenue: 18000 },
+                { month: "Wed", revenue: 22000 },
+                { month: "Thu", revenue: 15000 },
+                { month: "Fri", revenue: 26000 },
+                { month: "Sat", revenue: 30000 },
+                { month: "Sun", revenue: 28000 },
+              ]
+            : [
+                { month: "Jan", revenue: 40000 },
+                { month: "Feb", revenue: 55000 },
+                { month: "Mar", revenue: 70000 },
+                { month: "Apr", revenue: 62000 },
+              ]
+        );
 
-      setAppointmentData([
-        { name: "Completed", value: 120 },
-        { name: "Pending", value: 35 },
-        { name: "Cancelled", value: 20 },
-      ]);
+        setAppointmentData([
+          { name: "Completed", value: 120 },
+          { name: "Pending", value: 35 },
+          { name: "Cancelled", value: 20 },
+        ]);
 
-      setSummary({
-        totalUsers: 2340,
-        newUsers: 120,
-        doctors: 85,
-      });
+        setSummary({
+          totalUsers: 2340,
+          newUsers: range === "7" ? 28 : 120,
+          doctors: 85,
+        });
 
-      setLoading(false);
-    }, 800);
-  }, []);
+        setDoctors([
+          { name: "Dr. Rahman", appointments: 45, earnings: 90000 },
+          { name: "Dr. Ahmed", appointments: 38, earnings: 76000 },
+          { name: "Dr. Karim", appointments: 32, earnings: 64000 },
+        ]);
 
-  if (loading) {
-    return <div className="p-6">Loading reports...</div>;
-  }
+        setDepartments([
+          { name: "Cardiology", appointments: 120 },
+          { name: "Neurology", appointments: 80 },
+          { name: "Orthopedics", appointments: 95 },
+          { name: "Dermatology", appointments: 60 },
+        ]);
+
+        setLoading(false);
+      } catch (e) {
+        setError("Failed to load reports");
+        setLoading(false);
+      }
+    }, 700);
+  }, [range]);
+
+  if (loading) return <div className="p-6">Loading reports...</div>;
+  if (error) return <div className="p-6 text-red-500">{error}</div>;
 
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Admin Reports</h1>
         <div className="flex gap-2">
-          <Button variant="outline">Last 7 Days</Button>
-          <Button variant="outline">Last 30 Days</Button>
+          <Button
+            variant={range === "7" ? "default" : "outline"}
+            onClick={() => setRange("7")}
+          >
+            Last 7 Days
+          </Button>
+          <Button
+            variant={range === "30" ? "default" : "outline"}
+            onClick={() => setRange("30")}
+          >
+            Last 30 Days
+          </Button>
         </div>
       </div>
 
@@ -70,10 +133,7 @@ export default function AdminReports() {
           <h2 className="text-xl font-medium mb-3">Appointment Reports</h2>
           <div className="grid grid-cols-3 gap-4">
             {appointmentData.map((item) => (
-              <div key={item.name} className="p-4 rounded-xl shadow">
-                <p className="text-lg font-semibold">{item.value}</p>
-                <p className="text-sm text-muted-foreground">{item.name}</p>
-              </div>
+              <StatCard key={item.name} title={item.name} value={item.value} />
             ))}
           </div>
         </CardContent>
@@ -84,9 +144,9 @@ export default function AdminReports() {
         <CardContent className="p-4">
           <h2 className="text-xl font-medium mb-3">User & Registration Reports</h2>
           <div className="grid grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl shadow">Total Users: {summary.totalUsers}</div>
-            <div className="p-4 rounded-xl shadow">New This Month: {summary.newUsers}</div>
-            <div className="p-4 rounded-xl shadow">Doctors: {summary.doctors}</div>
+            <StatCard title="Total Users" value={summary.totalUsers} />
+            <StatCard title="New Users" value={summary.newUsers} />
+            <StatCard title="Doctors" value={summary.doctors} />
           </div>
         </CardContent>
       </Card>
@@ -104,16 +164,13 @@ export default function AdminReports() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td className="p-2">Dr. Rahman</td>
-                <td className="p-2">45</td>
-                <td className="p-2">৳90,000</td>
-              </tr>
-              <tr>
-                <td className="p-2">Dr. Ahmed</td>
-                <td className="p-2">38</td>
-                <td className="p-2">৳76,000</td>
-              </tr>
+              {doctors.map((d) => (
+                <tr key={d.name} className="border-b last:border-0">
+                  <td className="p-2">{d.name}</td>
+                  <td className="p-2">{d.appointments}</td>
+                  <td className="p-2">৳{d.earnings.toLocaleString()}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </CardContent>
@@ -124,10 +181,13 @@ export default function AdminReports() {
         <CardContent className="p-4">
           <h2 className="text-xl font-medium mb-3">Department Reports</h2>
           <div className="grid grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl shadow">Cardiology: 120 Appts</div>
-            <div className="p-4 rounded-xl shadow">Neurology: 80 Appts</div>
-            <div className="p-4 rounded-xl shadow">Orthopedics: 95 Appts</div>
-            <div className="p-4 rounded-xl shadow">Dermatology: 60 Appts</div>
+            {departments.map((dep) => (
+              <StatCard
+                key={dep.name}
+                title={dep.name}
+                value={`${dep.appointments} Appts`}
+              />
+            ))}
           </div>
         </CardContent>
       </Card>
