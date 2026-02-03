@@ -84,7 +84,7 @@ const AdminDashboard = () => {
         setAllDoctors(doctorsRes.data.doctors || []);
       setPendingCount(pendingRes.data?.pendingCount || 0);
       setSpecializations(
-        Array.isArray(specsRes.data?.data) ? specsRes.data.data : []
+        Array.isArray(specsRes.data?.data) ? specsRes.data.data : [],
       );
     } catch (err) {
       if (err?.response?.status === 401 || err?.response?.status === 403) {
@@ -282,8 +282,8 @@ const AdminDashboard = () => {
                             field === "password"
                               ? "password"
                               : field === "email"
-                              ? "email"
-                              : "text"
+                                ? "email"
+                                : "text"
                           }
                           name={field}
                           value={form[field]}
@@ -293,7 +293,7 @@ const AdminDashboard = () => {
                         />
                       )}
                     </div>
-                  )
+                  ),
                 )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -304,7 +304,7 @@ const AdminDashboard = () => {
                   "experience",
                 ].map((field) => (
                   <div key={field}>
-                    <label className="block mb-1 text-sm font-medium flex items-center gap-1">
+                    <label className="mb-1 text-sm font-medium flex items-center gap-1">
                       {field === "qualification" && (
                         <GraduationCap className="w-4 h-4" />
                       )}

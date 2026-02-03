@@ -12,7 +12,7 @@ const PatientDashboard = () => {
   const [error, setError] = useState("");
   
   const [page, setPage] = useState(1);
-  const [limit] = useState(5); // appointments per page
+  const [limit] = useState(5); 
   const [totalAppointments, setTotalAppointments] = useState(0);
 
   useEffect(() => {

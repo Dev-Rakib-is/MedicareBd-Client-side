@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { useAuth } from "../contex/AuthContex";
-import DoctorSidePrescriptinSide from "../components/prescriptionHelper/DoctorSidePrescriptinSide";
-import PatientSidePrescriptions from "../components/prescriptionHelper/PatientSidePrescriptions";
+import DoctorSidePrescriptinSide from "../components/prescriptions/DoctorSidePrescriptinSide";
+import PatientSidePrescriptions from "../components/prescriptions/PatientSidePrescriptions";
 import Unauthorized from "./Unauthorized";
 
 const Prescriptions = () => {

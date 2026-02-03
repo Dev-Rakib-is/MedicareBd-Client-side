@@ -27,7 +27,6 @@ import PatientCases from "./page/PatientCases";
 import Reports from "./page/Reports";
 
 import AdminLogin from "./page/AdminLogin";
-import AdminDashboard from "./components/dashboard/AdminDashboard";
 import AdminUsers from "./page/AdminUsers";
 
 // Doctor Protect Component
@@ -45,6 +44,9 @@ import AppointmentConfirmed from "./page/AppointmentConfirmed";
 import Prescriptions from "./page/Prescriptions";
 import Schedule from "./page/Schedule";
 import AdminPayments from "./page/AdminPayments";
+import AdminReports from "./components/report/AdminReports";
+import Diagnosis from "./page/Diagnoses";
+
 
 function App() {
   const { user } = useAuth();
@@ -55,7 +57,6 @@ function App() {
       <Routes>
         <Route element={<RootLayouts />}>
           <Route path="/" element={<Home />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
@@ -74,7 +75,14 @@ function App() {
           />
 
           <Route path="/notifications" element={<Notification />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/appointment" element={<Appointment />} />
           <Route path="/notice" element={<NoticeBoard />} />
           <Route path="/bills" element={<BillsPage />} />
@@ -91,8 +99,9 @@ function App() {
           <Route path="/disclaimer" element={<Disclaimer />} />
           <Route path="/schedules" element={<Schedule />} />
           <Route path="/admin/payments" element={<AdminPayments />} />
-          <Route path="/admin/reports" element={<AdminPayments />} />
-
+          <Route path="/admin/reports" element={<AdminReports />} />
+          <Route path="/diagnosis" element={<Diagnosis />} />
+          <Route path="/notice-board" element={<NoticeBoard />} />
           <Route
             path="/appointment-confirmed/:id"
             element={<AppointmentConfirmed />}
@@ -110,10 +119,15 @@ function App() {
           />
 
           {/* Doctor Routes with Guard */}
-          <Route path="/admin/doctors">
-            <Route index element={<AdminDoctors />} />
-            <Route path="patient" element={<PatientDoctor />} />
-          </Route>
+          <Route
+            path="/doctors"
+            element={
+              <ProtectedRoute>
+                <Route path="/admin/doctor" element={<AdminDoctors />} />
+                <Route path="/patient/doctor" element={<PatientDoctor />} />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Settings Routes */}
           <Route path="setting" element={<SettingsLayout />}>

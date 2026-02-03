@@ -1,7 +1,15 @@
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { Calendar, Clock, Edit, Save, X, CheckCircle, User } from "lucide-react";
-import api from './../api/api';
+import {
+  Calendar,
+  Clock,
+  Edit,
+  Save,
+  X,
+  CheckCircle,
+  User,
+} from "lucide-react";
+import api from "./../api/api";
 
 // ---------- Loader ----------
 const Loader = () => (
@@ -56,24 +64,27 @@ export default function Schedule() {
     { id: "SAT", label: "Sat" },
   ];
 
-  // ---------- Fetch Data ----------
   const loadData = async () => {
     try {
       setLoading(true);
       const scheduleRes = await api.get("/doctors/my-schedules");
-      const s = scheduleRes.data.data;
+      const scheduleData = scheduleRes.data.data;
 
       setSchedule({
-        workingDays: s.workingDays || [],
-        workingHours: s.workingHours || { from: "09:00", to: "17:00" },
-        slotDuration: s.slotDuration || 30,
+        workingDays: scheduleData.workingDays || [],
+        workingHours: scheduleData.workingHours || {
+          from: "09:00",
+          to: "17:00",
+        },
+        slotDuration: scheduleData.slotDuration || 30,
       });
 
+      // Get today's appointments
       const appRes = await api.get("/doctors/today-appointments");
       setAppointments(appRes.data.data || []);
     } catch (err) {
-      console.error(err);
-      toast.error("Failed to load schedule");
+      console.error("Error loading data:", err);
+      toast.error("Failed to load schedule data");
     } finally {
       setLoading(false);
     }
@@ -97,6 +108,7 @@ export default function Schedule() {
   const saveSchedule = async () => {
     try {
       setSaving(true);
+      // ✅ Correct endpoint with /doctors prefix
       await api.put("/doctors/my-schedules", schedule);
       toast.success("Schedule updated successfully");
       setEditing(false);
@@ -208,7 +220,9 @@ export default function Schedule() {
             <button
               key={d}
               disabled={!editing}
-              onClick={() => setSchedule((prev) => ({ ...prev, slotDuration: d }))}
+              onClick={() =>
+                setSchedule((prev) => ({ ...prev, slotDuration: d }))
+              }
               className={`px-3 py-2 rounded border text-sm font-medium transition ${
                 schedule.slotDuration === d
                   ? "bg-blue-600 text-white border-blue-600"
@@ -247,8 +261,8 @@ export default function Schedule() {
                     a.status === "PENDING"
                       ? "bg-yellow-100 text-yellow-700"
                       : a.status === "ACCEPTED" || a.status === "APPROVED"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-700"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-100 text-gray-700"
                   }`}
                 >
                   {a.status}
@@ -265,8 +279,9 @@ export default function Schedule() {
           <CheckCircle className="w-4 h-4" /> Summary
         </h3>
         <p className="text-sm mt-1">
-          Working {schedule.workingDays.length} days, {schedule.workingHours.from} -{" "}
-          {schedule.workingHours.to}, {schedule.slotDuration} min slots
+          Working {schedule.workingDays.length} days,{" "}
+          {schedule.workingHours.from} - {schedule.workingHours.to},{" "}
+          {schedule.slotDuration} min slots
         </p>
       </div>
     </div>

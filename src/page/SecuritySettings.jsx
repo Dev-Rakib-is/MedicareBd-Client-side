@@ -48,27 +48,31 @@ const SecuritySettings = () => {
     return true;
   };
 
-  const handlePasswordUpdate = async () => {
-    if (!validateForm()) return;
-    try {
-      setLoading(true);
-      const res = await api.post("/auth/update-password", {
-        currentPassword,
-        newPassword,
-      });
+ const handlePasswordUpdate = async () => {
+  if (!validateForm()) return;
+  try {
+    setLoading(true);
+    const res = await api.patch("/auth/me/password", {
+      currentPassword,
+      newPassword,
+    });
 
-      if (res.status === 200) {
-        displayMessage("Password updated successfully! Please re-login.");
-        setCurrentPassword("");
-        setNewPassword("");
-        setConfirmPassword("");
-      }
-    } catch (err) {
-      displayMessage(err.response?.data?.message || "Server error. Try again later.");
-    } finally {
-      setLoading(false);
+    if (res.status === 200) {
+      displayMessage("Password updated successfully! Please re-login.");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
     }
-  };
+  } catch (err) {
+    console.error(err);
+    displayMessage(
+      err.response?.data?.message || "Server error. Try again later."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="p-6 dark:bg-black">

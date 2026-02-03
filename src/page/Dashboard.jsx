@@ -1,7 +1,7 @@
 import { useAuth } from "../contex/AuthContex";
 import PatientDashboard from "../components/dashboard/PatientDashboard";
-import DoctorDashboard from "../components/dashboard//DoctorDashboard";
-import AdminDashboard from "../components/dashboard//AdminDashboard";
+import DoctorDashboard from "../components/dashboard/DoctorDashboard";
+import AdminDashboard from "../components/dashboard/AdminDashboard";
 import Login from "./Login";
 
 const Dashboard = () => {
