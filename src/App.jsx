@@ -120,11 +120,11 @@ function App() {
 
           {/* Doctor Routes with Guard */}
           <Route
-            path="/doctors"
+            path="/doctor"
             element={
               <ProtectedRoute>
-                <Route path="/admin/doctor" element={<AdminDoctors />} />
-                <Route path="/patient/doctor" element={<PatientDoctor />} />
+                <Route path="/doctor" element={<AdminDoctors />} />
+                <Route path="/doctor" element={<PatientDoctor />} />
               </ProtectedRoute>
             }
           />

@@ -1,125 +1,134 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import AgoraRTC from "agora-rtc-sdk-ng";
+import api from "../../api/api";
 
-const PatientLiveConsaltation = ({ onEndCall }) => {
+const APP_ID = "bfad43ab7d974c609de7a8b03feffe7f";
+const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+
+const PatientLiveConsultation = ({ appointmentId, onEndCall }) => {
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
 
-  const [stream, setStream] = useState(null);
+  const [localTracks, setLocalTracks] = useState([]);
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
-  const [messages, setMessages] = useState([]);
-  const [messageInput, setMessageInput] = useState("");
-  const [file, setFile] = useState(null);
 
-  // Media setup
+  const channelName = appointmentId ? `consult_${appointmentId}` : null;
+
+  // =============================
+  // JOIN + PUBLISH
+  // =============================
   useEffect(() => {
-    async function initMedia() {
+    if (!channelName) return; // prevent undefined channelName
+
+    let tracks = [];
+
+    const startCall = async () => {
       try {
-        const s = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        setStream(s);
-        if (localVideoRef.current) localVideoRef.current.srcObject = s;
+        const uid = Math.floor(Math.random() * 100000);
+
+        // get token from backend
+        const { data } = await api.post("/agora/token", { channelName, uid });
+        const token = data.token;
+
+        await client.join(APP_ID, channelName, token, uid);
+
+        // create mic + cam tracks
+        tracks = await AgoraRTC.createMicrophoneAndCameraTracks();
+        setLocalTracks(tracks);
+
+        // show local video
+        tracks[1].play(localVideoRef.current);
+
+        // publish local tracks
+        await client.publish(tracks);
+
+        // handle remote users
+        client.on("user-published", async (user, mediaType) => {
+          await client.subscribe(user, mediaType);
+
+          if (mediaType === "video") {
+            user.videoTrack.play(remoteVideoRef.current);
+          }
+          if (mediaType === "audio") {
+            user.audioTrack.play();
+          }
+        });
       } catch (err) {
-        console.warn("Camera or microphone not found.:", err);
+        console.error("Agora error:", err);
       }
-    }
-    initMedia();
-  }, []);
+    };
 
-  const toggleMic = () => {
-    if (stream) {
-      stream.getAudioTracks().forEach(track => (track.enabled = !micOn));
-      setMicOn(!micOn);
-    }
+    startCall();
+
+    return () => {
+      tracks.forEach((t) => t?.close());
+      client.leave();
+    };
+  }, [channelName]);
+
+  // =============================
+  // MIC & CAM TOGGLE
+  // =============================
+  const toggleMic = async () => {
+    if (!localTracks[0]) return;
+    await localTracks[0].setEnabled(!micOn);
+    setMicOn(!micOn);
   };
 
-  const toggleCam = () => {
-    if (stream) {
-      stream.getVideoTracks().forEach(track => (track.enabled = !camOn));
-      setCamOn(!camOn);
-    }
+  const toggleCam = async () => {
+    if (!localTracks[1]) return;
+    await localTracks[1].setEnabled(!camOn);
+    setCamOn(!camOn);
   };
 
-  const sendMessage = () => {
-    if (messageInput.trim() === "" && !file) return;
-    const newMsg = { text: messageInput, file };
-    setMessages(prev => [...prev, newMsg]);
-    setMessageInput("");
-    setFile(null);
+  // =============================
+  // END CALL
+  // =============================
+  const handleEndCall = async () => {
+    localTracks.forEach((t) => t?.close());
+    await client.leave();
+    onEndCall?.();
   };
+
+  if (!appointmentId) return <div>Loading consultation...</div>;
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 z-40">
-      {/* Video area */}
-      <div className="flex flex-1 relative bg-black mt-16">
-        <video
-          ref={remoteVideoRef}
-          className="w-full h-full object-cover"
-          autoPlay
-          playsInline
-        />
-        <video
-          ref={localVideoRef}
-          className="w-32 h-32 absolute bottom-4 right-4 border-2 border-white rounded-md object-cover"
-          autoPlay
-          muted
-          playsInline
-        />
-        {/* Control buttons */}
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4">
-          <button
-            onClick={toggleMic}
-            className={`px-4 py-2 rounded-full ${micOn ? "bg-green-500" : "bg-red-500"} text-white`}
-          >
-            {micOn ? "Mic On" : "Mic Off"}
-          </button>
-          <button
-            onClick={toggleCam}
-            className={`px-4 py-2 rounded-full ${camOn ? "bg-green-500" : "bg-red-500"} text-white`}
-          >
-            {camOn ? "Cam On" : "Cam Off"}
-          </button>
-          <button
-            onClick={onEndCall}
-            className="px-4 py-2 rounded-full bg-red-700 text-white"
-          >
-            End Call
-          </button>
-        </div>
-      </div>
+    <div className="flex flex-col h-screen bg-black">
+      {/* Remote video */}
+      <div ref={remoteVideoRef} className="flex-1" />
 
-      {/* Chat area */}
-      <div className="h-3 border-t border-gray-300 flex flex-col p-2 max-w-md w-full mx-auto">
-        <div className="flex-1 overflow-y-auto mb-2">
-          {messages.map((msg, idx) => (
-            <div key={idx} className="mb-1">
-              {msg.text && <p>{msg.text}</p>}
-              {msg.file && <p className="text-blue-500">{msg.file.name}</p>}
-            </div>
-          ))}
-        </div>
-        <div className="flex space-x-2">
-          <input
-            type="text"
-            value={messageInput}
-            onChange={(e) => setMessageInput(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 border rounded px-2 py-1"
-          />
-          <input
-            type="file"
-            onChange={(e) => setFile(e.target.files[0])}
-            className="border rounded px-2 py-1"
-          />
-          <button
-            onClick={sendMessage}
-            className="bg-blue-600 text-white px-4 py-1 rounded"
-          >
-            Send
-          </button>
-        </div>
+      {/* Local video */}
+      <div
+        ref={localVideoRef}
+        className="w-40 h-40 absolute bottom-4 right-4 rounded-xl overflow-hidden border"
+      />
+
+      {/* Controls */}
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-4">
+        <button
+          onClick={toggleMic}
+          className={`px-4 py-2 rounded ${micOn ? "bg-green-600" : "bg-red-600"} text-white`}
+        >
+          Mic
+        </button>
+
+        <button
+          onClick={toggleCam}
+          className={`px-4 py-2 rounded ${camOn ? "bg-green-600" : "bg-red-600"} text-white`}
+        >
+          Cam
+        </button>
+
+        <button
+          onClick={handleEndCall}
+          className="px-4 py-2 rounded bg-red-800 text-white"
+        >
+          End
+        </button>
       </div>
     </div>
   );
 };
 
-export default PatientLiveConsaltation;
+export default PatientLiveConsultation;

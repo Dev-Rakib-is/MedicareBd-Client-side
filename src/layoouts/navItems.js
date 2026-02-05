@@ -27,18 +27,16 @@ export const navItems = {
     { label: "Prescriptions", to: "/prescriptions" },
     { label: "Reports", to: "/reports" },
     { label: "Documents", to: "/documents" },
-    { label: "SMS", to: "/doctor/sms" },
   ],
 
   // ================= ADMIN =================
   ADMIN: [
     { label: "Dashboard", to: "/dashboard" },
     { label: "Users", to: "/admin/users" },
-    { label: "Doctors", to: "/admin/doctors" },
+    { label: "Doctors", to: "/doctors" },
     { label: "Appointments", to: "/admin/appointments" },
     { label: "Payments", to: "/admin/payments" },
     { label: "Reports", to: "/admin/reports" },
-    { label: "SMS", to: "/sms" },
   ],
 
   PUBLIC: [

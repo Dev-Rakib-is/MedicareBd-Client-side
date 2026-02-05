@@ -140,7 +140,7 @@ const Hero = () => {
             {/* CTA Buttons */}
             <div className="flex flex-wrap gap-4 mb-8">
               <button
-                onClick={() => navigate("/admin/doctors/patient?from=booking")}
+                onClick={() => navigate("/doctors/patient?from=booking")}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg font-bold flex items-center gap-2 transition-colors"
               >
                 <span>Book Appointment</span>
@@ -157,7 +157,7 @@ const Hero = () => {
                 </motion.div>
               </button>
               <button
-                onClick={() => navigate("/admin/doctors/patient")}
+                onClick={() => navigate("/doctors/patient")}
                 className="border-2 border-blue-600 text-blue-600 hover:bg-blue-50 px-8 py-3 rounded-lg font-bold transition-colors"
               >
                 View Doctors

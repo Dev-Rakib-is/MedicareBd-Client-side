@@ -1,6 +1,5 @@
 import { Navigate, useLocation } from "react-router";
 import { useAuth } from "../contex/AuthContex";
-import Login from './../page/Login';
 
 const ProtectedRoute = ({ children, role }) => {
   const location = useLocation();

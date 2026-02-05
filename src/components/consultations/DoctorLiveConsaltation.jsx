@@ -1,105 +1,109 @@
+import { useEffect, useRef, useState } from "react";
+import AgoraRTC from "agora-rtc-sdk-ng";
+import api from "../../api/api";
 
-import  { useState } from "react";
-import PatientTile from "./PatientTile";
-import { MessageSquare } from "lucide-react";
+const APP_ID = "bfad43ab7d974c609de7a8b03feffe7f";
+const client = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
 
-const DoctorConsultation = () => {
-  const [patients, setPatients] = useState([
-    { id: 1, name: "Patient 1", videoJoined: false, micOn: true, videoOn: true },
-    { id: 2, name: "Patient 2", videoJoined: false, micOn: true, videoOn: true },
-  ]);
+const DoctorLiveConsultation = ({ appointmentId, onEndCall }) => {
+  const localVideoRef = useRef(null);
+  const remoteVideoRef = useRef(null);
 
-  const [chatVisible, setChatVisible] = useState(false);
-  const [chatMessages, setChatMessages] = useState([]);
-  const [chatInput, setChatInput] = useState("");
+  const [localTracks, setLocalTracks] = useState([]);
+  const [micOn, setMicOn] = useState(true);
+  const [camOn, setCamOn] = useState(true);
 
-  const toggleVideo = (id) => {
-    setPatients((prev) =>
-      prev.map((p) =>
-        p.id === id ? { ...p, videoOn: !p.videoOn, videoJoined: !p.videoJoined } : p
-      )
-    );
+  const channelName = appointmentId ? `consult_${appointmentId}` : null;
+
+  useEffect(() => {
+    if (!channelName) return;
+
+    let tracks = [];
+
+    const startCall = async () => {
+      try {
+        const uid = Math.floor(Math.random() * 100000);
+        const { data } = await api.post("/agora/token", { channelName, uid });
+        const token = data.token;
+
+        await client.join(APP_ID, channelName, token, uid);
+
+        tracks = await AgoraRTC.createMicrophoneAndCameraTracks();
+        setLocalTracks(tracks);
+        tracks[1].play(localVideoRef.current);
+        await client.publish(tracks);
+
+        client.on("user-published", async (user, mediaType) => {
+          await client.subscribe(user, mediaType);
+
+          if (mediaType === "video")
+            user.videoTrack.play(remoteVideoRef.current);
+          if (mediaType === "audio") user.audioTrack.play();
+        });
+      } catch (err) {
+        console.error("Agora error:", err);
+      }
+    };
+
+    startCall();
+
+    return () => {
+      tracks.forEach((t) => t?.close());
+      client.leave();
+    };
+  }, [channelName]);
+
+  const toggleMic = async () => {
+    if (!localTracks[0]) return;
+    await localTracks[0].setEnabled(!micOn);
+    setMicOn(!micOn);
   };
 
-  const toggleMic = (id) => {
-    setPatients((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, micOn: !p.micOn } : p))
-    );
+  const toggleCam = async () => {
+    if (!localTracks[1]) return;
+    await localTracks[1].setEnabled(!camOn);
+    setCamOn(!camOn);
   };
 
-  const endCall = (id) => {
-    setPatients((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, videoJoined: false, videoOn: false } : p))
-    );
+  const handleEndCall = async () => {
+    localTracks.forEach((t) => t?.close());
+    await client.leave();
+    onEndCall?.();
   };
 
-  const sendMessage = () => {
-    if (chatInput.trim() === "") return;
-    setChatMessages((prev) => [...prev, { sender: "Doctor", text: chatInput }]);
-    setChatInput("");
-  };
+  if (!appointmentId) return <div>Loading consultation...</div>;
 
   return (
-    <div className="p-4 mt-16">
-      <h1 className="text-2xl font-bold mb-4">Doctor Consultation</h1>
-
-      {/* Video Tiles */}
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        {patients.map((patient) => (
-          <PatientTile
-            key={patient.id}
-            patient={patient}
-            toggleVideo={toggleVideo}
-            toggleMic={toggleMic}
-            endCall={endCall}
-          />
-        ))}
-      </div>
-
-      {/* Chat Section Toggle */}
-      <div className="flex items-center mb-2">
+    <div className="flex flex-col h-screen bg-black">
+      <div ref={remoteVideoRef} className="flex-1" />
+      <div
+        ref={localVideoRef}
+        className="w-40 h-40 absolute bottom-4 right-4 rounded-xl overflow-hidden border"
+      />
+      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-4">
         <button
-          className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded"
-          onClick={() => setChatVisible(!chatVisible)}
+          onClick={toggleMic}
+          className={`px-4 py-2 rounded ${micOn ? "bg-green-600" : "bg-red-600"} text-white`}
         >
-          <MessageSquare size={20} /> Chat
+          Mic
+        </button>
+
+        <button
+          onClick={toggleCam}
+          className={`px-4 py-2 rounded ${camOn ? "bg-green-600" : "bg-red-600"} text-white`}
+        >
+          Cam
+        </button>
+
+        <button
+          onClick={handleEndCall}
+          className="px-4 py-2 rounded bg-red-800 text-white"
+        >
+          End
         </button>
       </div>
-
-      {/* Chat Box */}
-      {chatVisible && (
-        <div className="border rounded p-2 w-full max-w-md">
-          <div className="h-40 overflow-y-auto mb-2 bg-gray-100 p-2 rounded">
-            {chatMessages.length === 0 ? (
-              <p className="text-gray-400 text-sm">No messages yet...</p>
-            ) : (
-              chatMessages.map((msg, idx) => (
-                <p key={idx} className="mb-1">
-                  <strong>{msg.sender}: </strong>
-                  {msg.text}
-                </p>
-              ))
-            )}
-          </div>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder="Type a message..."
-              className="flex-1 border rounded px-2 py-1"
-            />
-            <button
-              className="bg-green-500 text-white px-4 py-1 rounded"
-              onClick={sendMessage}
-            >
-              Send
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
-export default DoctorConsultation;
+export default DoctorLiveConsultation;
