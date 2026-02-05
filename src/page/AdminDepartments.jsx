@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import api from "../api/api";
-import DepartmentFilters from "../components/adminDepartments/DepartmentFilters";
-import DepartmentTable from "../components/adminDepartments/DepartmentTable";
-import AddDepartmentModal from "../components/adminDepartments/AddDepartmentModal";
+import DepartmentFilters from "../components/adminDepartment/DepartmentFilters";
+import DepartmentTable from "../components/adminDepartment/DepartmentTable";
+import AddDepartmentModal from "../components/adminDepartment/AddDepartmentModal";
 import { Building, Plus } from "lucide-react";
 import Swal from "sweetalert2";
 
@@ -15,7 +15,7 @@ export default function AdminDepartmentsPage() {
 
   useEffect(() => {
     fetchDepartments();
-  }, []); 
+  }, []);
 
   // Fetch all departments
   const fetchDepartments = async () => {
@@ -64,16 +64,17 @@ export default function AdminDepartmentsPage() {
   // Stats calculation
   const stats = {
     total: departments.length,
-    active: departments.filter(d => d.status === "active").length,
-    inactive: departments.filter(d => d.status === "inactive").length
+    active: departments.filter((d) => d.status === "active").length,
+    inactive: departments.filter((d) => d.status === "inactive").length,
   };
 
   // Filtered departments
-  const filteredDepartments = departments.filter(dept => {
-    const matchesSearch = 
+  const filteredDepartments = departments.filter((dept) => {
+    const matchesSearch =
       dept.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       dept.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || dept.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "all" || dept.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
 
@@ -91,8 +92,8 @@ export default function AdminDepartmentsPage() {
               </p>
             </div>
           </div>
-          
-          <button 
+
+          <button
             onClick={() => setShowAddModal(true)}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg hover:shadow-xl"
           >
@@ -100,14 +101,16 @@ export default function AdminDepartmentsPage() {
             Add New Department
           </button>
         </div>
-        
+
         {/* Status cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
           <div className="bg-white rounded-2xl p-6 shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Total Departments</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{stats.total}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">
+                  {stats.total}
+                </p>
               </div>
               <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
                 <div className="w-6 h-6 rounded-full bg-blue-500"></div>
@@ -119,7 +122,9 @@ export default function AdminDepartmentsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Active</p>
-                <p className="text-3xl font-bold text-green-600 mt-2">{stats.active}</p>
+                <p className="text-3xl font-bold text-green-600 mt-2">
+                  {stats.active}
+                </p>
               </div>
               <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
                 <div className="w-2 h-2 rounded-full bg-green-500"></div>
@@ -131,7 +136,9 @@ export default function AdminDepartmentsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm">Inactive</p>
-                <p className="text-3xl font-bold text-red-600 mt-2">{stats.inactive}</p>
+                <p className="text-3xl font-bold text-red-600 mt-2">
+                  {stats.inactive}
+                </p>
               </div>
               <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
                 <div className="w-2 h-2 rounded-full bg-red-500"></div>
@@ -150,13 +157,13 @@ export default function AdminDepartmentsPage() {
         onRefresh={fetchDepartments}
         loading={loading}
       />
-      
+
       <DepartmentTable
         departments={filteredDepartments}
         loading={loading}
         onRefresh={fetchDepartments}
       />
-      
+
       {/* Add Department Modal */}
       <AddDepartmentModal
         isOpen={showAddModal}
