@@ -1,36 +1,39 @@
 import { useEffect, useState } from "react";
 import api from "../../api/api";
-import { X, RefreshCw, Calendar, Clock, User, Video, AlertCircle } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  X,
+  RefreshCw,
+  Calendar,
+  Clock,
+  AlertCircle,
+  ThumbsUp,
+  ThumbsDown,
+} from "lucide-react";
 
-const STATUS_OPTIONS = [
-  "All",
-  "Pending",
-  "Accepted",
-  "Approved",
-  "Completed",
-  "Cancelled",
-  "Rejected",
-];
+const STATUS_OPTIONS = ["All", "Pending", "Accepted", "Completed", "Rejected"];
 
-const PatientAppointment = () => {
-  const [appointments, setAppointments] = useState([]);
+const DoctorSideAppointment = () => {
+  const [appts, setAppts] = useState([]);
   const [filter, setFilter] = useState("All");
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState(null);
-  const [cancellingId, setCancellingId] = useState(null);
-  const [joiningId, setJoiningId] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
 
-  const fetchAppointments = async () => {
+  const fetchAppts = async (p = page) => {
     try {
       setLoading(true);
       setError("");
-      const res = await api.get("/appointments/doctor");
-      setAppointments(res.data.appointments || []);
+      const res = await api.get(
+        `/appointments/doctor?page=${p}&limit=${limit}`,
+      );
+      setAppts(res.data.appointments || []);
+      setTotalPages(Math.ceil((res.data.totalAppointments || 0) / limit));
+      setPage(res.data.page || p);
     } catch (err) {
-      console.error("Fetch appointments error:", err);
       setError(err.response?.data?.message || "Failed to load appointments");
     } finally {
       setLoading(false);
@@ -38,157 +41,54 @@ const PatientAppointment = () => {
   };
 
   useEffect(() => {
-    fetchAppointments();
+    fetchAppts(1);
   }, []);
 
-  const filtered = filter === "All"
-    ? appointments
-    : appointments.filter(
-        (a) => (a.status || "").toLowerCase() === filter.toLowerCase()
-      );
+  const filtered =
+    filter === "All"
+      ? appts
+      : appts.filter((a) => a.status?.toLowerCase() === filter.toLowerCase());
 
-  const cancelAppointment = async (id) => {
+  const updateStatus = async (id, newStatus) => {
+    setUpdatingId(id);
     try {
-      setCancellingId(id);
-      const res = await api.patch(`/appointments/status/update`, {
+      await api.patch("/appointments/status/update", {
         appointmentId: id,
-        status: "CANCELLED",
+        status: newStatus,
       });
-      setAppointments((prev) =>
-        prev.map((a) => (a._id === id ? { ...a, status: "Cancelled" } : a))
+      setAppts((prev) =>
+        prev.map((a) => (a._id === id ? { ...a, status: newStatus } : a)),
       );
-      alert(res.data?.message || "Appointment cancelled");
+      alert(`Status updated to ${newStatus}`);
     } catch (err) {
-      console.error("Cancel error:", err);
-      alert(err.response?.data?.message || "Failed to cancel appointment");
+      alert(err.response?.data?.message || "Failed to update");
     } finally {
-      setCancellingId(null);
+      setUpdatingId(null);
     }
   };
 
-  const joinLive = async (appt) => {
-    try {
-      setJoiningId(appt._id);
-      if (appt.liveUrl) {
-        window.open(appt.liveUrl, "_blank");
-        return;
-      }
-
-      const res = await api.post(`/appointments/${appt._id}/live`);
-      const liveUrl = res.data.liveUrl || res.data.url;
-      if (liveUrl) {
-        setAppointments((prev) =>
-          prev.map((a) => (a._id === appt._id ? { ...a, liveUrl } : a))
-        );
-        window.open(liveUrl, "_blank");
-      } else {
-        alert("Live URL not returned from server");
-      }
-    } catch (err) {
-      console.error("Live join error:", err);
-      alert(
-        err.response?.data?.message || "Failed to start/join live consultation"
-      );
-    } finally {
-      setJoiningId(null);
-    }
-  };
-
-  const canJoinLive = (status) => {
-    const statusLower = (status || "").toLowerCase();
-    return ["accepted", "approved", "ongoing"].includes(statusLower);
-  };
-
-  const canCancel = (status) => {
-    const statusLower = (status || "").toLowerCase();
-    return ["pending", "accepted", "approved"].includes(statusLower);
-  };
-
-  const formatDateTime = (dateString) => {
-    const date = new Date(dateString);
-    return {
-      date: date.toLocaleDateString('en-US', { 
-        weekday: 'short', 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
-      }),
-      time: date.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      })
-    };
-  };
-
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        type: "spring",
-        stiffness: 100
-      }
-    }
-  };
-
-  const modalVariants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: { 
-      opacity: 1, 
-      scale: 1,
-      transition: {
-        type: "spring",
-        damping: 25
-      }
-    },
-    exit: { opacity: 0, scale: 0.8 }
-  };
-
-  const overlayVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 },
-    exit: { opacity: 0 }
-  };
+  const formatDate = (d) =>
+    new Date(d + "T00:00:00").toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className="p-6 max-w-5xl mx-auto mt-16 space-y-6"
-    >
-      {/* Header */}
-      <motion.header 
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
-      >
+    <div className="p-6 max-w-5xl mx-auto mt-16 space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             My Appointments
           </h1>
           <p className="text-sm text-gray-600 mt-1">
-            Manage and join your consultations
+            Manage your consultations
           </p>
         </div>
-
         <div className="flex items-center gap-3">
-          <motion.select
-            whileHover={{ scale: 1.02 }}
-            whileFocus={{ scale: 1.02 }}
-            className="border border-gray-300 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          <select
+            className="border border-gray-300 px-4 py-2 rounded-lg focus:ring-2 focus:ring-blue-500"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           >
@@ -197,406 +97,277 @@ const PatientAppointment = () => {
                 {s}
               </option>
             ))}
-          </motion.select>
-
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={fetchAppointments}
+          </select>
+          <button
+            onClick={() => fetchAppts(page)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-            title="Refresh"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />{" "}
             Refresh
-          </motion.button>
+          </button>
         </div>
-      </motion.header>
+      </div>
 
-      {/* Loading State */}
-      <AnimatePresence>
-        {loading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="text-center py-20"
+      {loading && (
+        <div className="text-center py-20">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading appointments...</p>
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => fetchAppts(1)}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
           >
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"
-            />
-            <p className="text-gray-600">Loading appointments...</p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            Try Again
+          </button>
+        </div>
+      )}
 
-      {/* Error State */}
-      <AnimatePresence>
-        {!loading && error && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="bg-red-50 border border-red-200 rounded-lg p-6 text-center"
-          >
-            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
-            <p className="text-red-600 mb-4">{error}</p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={fetchAppointments}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-            >
-              Try Again
-            </motion.button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {!loading && !error && filtered.length === 0 && (
+        <div className="text-center py-16 bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl border border-gray-200">
+          <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No appointments found
+          </h3>
+          <p className="text-gray-600 max-w-md mx-auto">
+            {filter === "All"
+              ? "You don't have any appointments yet."
+              : `No appointments with status "${filter}" found.`}
+          </p>
+        </div>
+      )}
 
-      {/* Empty State */}
-      <AnimatePresence>
-        {!loading && !error && filtered.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
-            className="text-center py-16 bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl border border-gray-200"
-          >
-            <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No appointments found
-            </h3>
-            <p className="text-gray-600 max-w-md mx-auto">
-              {filter === "All" 
-                ? "You don't have any appointments yet." 
-                : `No appointments with status "${filter}" found.`}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Appointments List */}
       {!loading && !error && filtered.length > 0 && (
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="space-y-4"
-        >
+        <div className="space-y-4">
           {filtered.map((a) => {
-            const formattedDateTime = formatDateTime(a.date);
-            
+            const isUpdating = updatingId === a._id;
             return (
-              <motion.article
+              <div
                 key={a._id}
-                variants={itemVariants}
-                whileHover={{ y: -2, boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)" }}
-                className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 border border-gray-200 rounded-xl bg-white"
+                className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-6 border border-gray-200 rounded-xl bg-white hover:shadow-lg transition-shadow"
               >
                 <div className="flex items-center gap-4 flex-1">
-                  <motion.img
-                    whileHover={{ scale: 1.05 }}
-                    src={a.doctor?.photo_url || a.doctor?.photo || "/default-avatar.png"}
-                    alt={a.doctor?.name || "Doctor"}
+                  <img
+                    src={
+                      a.patient?.photo_url ||
+                      a.patient?.photo ||
+                      "/default-avatar.png"
+                    }
+                    alt={a.patient?.name || "Patient"}
                     className="w-16 h-16 rounded-xl object-cover border-2 border-white shadow-md"
                   />
                   <div className="flex-1">
                     <h3 className="font-semibold text-lg text-gray-900">
-                      {a.doctor?.name || "Doctor"}
+                      {a.patient?.name || "Patient"}
                     </h3>
                     <p className="text-sm text-gray-600">
-                      {a.doctor?.specialization || "General"}
+                      {a.patient?.country || "Country not specified"}
                     </p>
                     <div className="flex items-center gap-4 mt-2">
                       <div className="flex items-center gap-1 text-sm text-gray-600">
                         <Calendar className="w-4 h-4" />
-                        <span>{formattedDateTime.date}</span>
+                        <span>{formatDate(a.date)}</span>
                       </div>
                       <div className="flex items-center gap-1 text-sm text-gray-600">
                         <Clock className="w-4 h-4" />
-                        <span>{formattedDateTime.time}</span>
+                        <span>{a.timeSlot}</span>
                       </div>
                     </div>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <StatusBadge status={a.status} />
-
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
+                  <button
                     onClick={() => setSelected(a)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+                    disabled={isUpdating}
+                    className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
                   >
                     Details
-                  </motion.button>
-
-                  {canJoinLive(a.status) && (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => joinLive(a)}
-                      disabled={joiningId === a._id || saving}
-                      className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 flex items-center gap-2 disabled:opacity-50"
-                    >
-                      <Video className="w-4 h-4" />
-                      {joiningId === a._id ? "Joining..." : "Join Live"}
-                    </motion.button>
-                  )}
-
-                  {canCancel(a.status) && (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => {
-                        if (window.confirm("Are you sure you want to cancel this appointment?")) {
-                          cancelAppointment(a._id);
-                        }
-                      }}
-                      disabled={cancellingId === a._id || saving}
-                      className="px-4 py-2 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-lg hover:from-red-600 hover:to-pink-700 disabled:opacity-50"
-                    >
-                      {cancellingId === a._id ? "Cancelling..." : "Cancel"}
-                    </motion.button>
+                  </button>
+                  {a.status === "PENDING" && (
+                    <>
+                      <button
+                        onClick={() => updateStatus(a._id, "ACCEPTED")}
+                        disabled={isUpdating}
+                        className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <ThumbsUp className="w-4 h-4" />
+                        {isUpdating ? "Accepting..." : "Accept"}
+                      </button>
+                      <button
+                        onClick={() => updateStatus(a._id, "REJECTED")}
+                        disabled={isUpdating}
+                        className="px-4 py-2 bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-lg hover:from-gray-600 hover:to-gray-700 flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <ThumbsDown className="w-4 h-4" />
+                        {isUpdating ? "Rejecting..." : "Reject"}
+                      </button>
+                    </>
                   )}
                 </div>
-              </motion.article>
+              </div>
             );
           })}
-        </motion.div>
+        </div>
       )}
 
-      {/* Details Modal */}
-      <AnimatePresence>
-        {selected && (
-          <>
-            <motion.div
-              variants={overlayVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-              onClick={() => setSelected(null)}
-            />
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <motion.div
-                variants={modalVariants}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6 relative"
-                onClick={(e) => e.stopPropagation()}
+      {!loading && !error && totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 mt-6">
+          <button
+            onClick={() => fetchAppts(page - 1)}
+            disabled={page === 1}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-gray-700">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            onClick={() => fetchAppts(page + 1)}
+            disabled={page === totalPages}
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
+
+      {selected && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+            onClick={() => setSelected(null)}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="w-full max-w-2xl bg-white rounded-2xl shadow-xl p-6 relative">
+              <button
+                onClick={() => setSelected(null)}
+                className="absolute right-4 top-4 p-2 hover:bg-gray-100 rounded-full"
               >
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => setSelected(null)}
-                  className="absolute right-4 top-4 p-2 hover:bg-gray-100 rounded-full"
-                >
-                  <X className="w-5 h-5 text-gray-500" />
-                </motion.button>
-
-                <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6">
-                  Appointment Details
-                </h2>
-
-                <div className="space-y-6">
-                  {/* Doctor Info */}
-                  <motion.div 
-                    initial={{ x: -20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.1 }}
-                    className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl"
-                  >
-                    <img
-                      src={selected.doctor?.photo_url || "/default-avatar.png"}
-                      alt={selected.doctor?.name}
-                      className="w-20 h-20 rounded-xl object-cover border-4 border-white shadow-md"
-                    />
-                    <div>
-                      <h3 className="font-bold text-xl text-gray-900">
-                        {selected.doctor?.name}
-                      </h3>
-                      <p className="text-gray-600">
-                        {selected.doctor?.specialization}
-                      </p>
-                      <p className="text-sm text-gray-500 mt-1">
-                        {selected.doctor?.hospital || "Hospital not specified"}
-                      </p>
-                    </div>
-                  </motion.div>
-
-                  {/* Details Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <motion.div
-                      initial={{ y: 20, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ delay: 0.2 }}
-                      className="space-y-4"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Date</p>
-                        <p className="font-semibold text-gray-900">
-                          {formatDateTime(selected.date).date}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Time</p>
-                        <p className="font-semibold text-gray-900">
-                          {formatDateTime(selected.date).time}
-                        </p>
-                      </div>
-                    </motion.div>
-
-                    <motion.div
-                      initial={{ y: 20, opacity: 0 }}
-                      animate={{ y: 0, opacity: 1 }}
-                      transition={{ delay: 0.3 }}
-                      className="space-y-4"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Status</p>
-                        <div className="mt-1">
-                          <StatusBadge status={selected.status} />
-                        </div>
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Appointment ID</p>
-                        <p className="font-mono text-gray-900 text-sm">
-                          {selected._id?.slice(-8)}
-                        </p>
-                      </div>
-                    </motion.div>
-                  </div>
-
-                  {/* Notes */}
-                  <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                  >
-                    <p className="text-sm font-medium text-gray-500 mb-2">Notes</p>
-                    <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
-                      {selected.notes || "No extra notes provided."}
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+              <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-6">
+                Appointment Details
+              </h2>
+              <div className="space-y-6">
+                <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
+                  <img
+                    src={
+                      selected.patient?.photo_url ||
+                      selected.patient?.photo ||
+                      "/default-avatar.png"
+                    }
+                    alt={selected.patient?.name}
+                    className="w-20 h-20 rounded-xl object-cover border-4 border-white shadow-md"
+                  />
+                  <div>
+                    <h3 className="font-bold text-xl text-gray-900">
+                      {selected.patient?.name}
+                    </h3>
+                    <p className="text-gray-600">
+                      {selected.patient?.email || "Email not available"}
                     </p>
-                  </motion.div>
+                    <p className="text-sm text-gray-500 mt-1">
+                      {selected.patient?.country || "Country not specified"}
+                    </p>
+                  </div>
                 </div>
-
-                {/* Modal Actions */}
-                <motion.div 
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                  className="flex flex-col sm:flex-row justify-end gap-3 mt-8 pt-6 border-t"
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Date</p>
+                    <p className="font-semibold text-gray-900">
+                      {formatDate(selected.date)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Time</p>
+                    <p className="font-semibold text-gray-900">
+                      {selected.timeSlot}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">Status</p>
+                    <StatusBadge status={selected.status} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-500">
+                      Appointment ID
+                    </p>
+                    <p className="font-mono text-gray-900 text-sm">
+                      {selected._id?.slice(-8)}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2">
+                    Reason
+                  </p>
+                  <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
+                    {selected.reason || "No reason provided."}
+                  </p>
+                </div>
+                {selected.notes && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-500 mb-2">
+                      Additional Notes
+                    </p>
+                    <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
+                      {selected.notes}
+                    </p>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end mt-8 pt-6 border-t">
+                <button
+                  onClick={() => setSelected(null)}
+                  className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
                 >
-                  {canCancel(selected.status) && (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => {
-                        if (window.confirm("Are you sure you want to cancel this appointment?")) {
-                          cancelAppointment(selected._id);
-                          setSelected(null);
-                        }
-                      }}
-                      className="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-lg hover:from-red-600 hover:to-pink-700 font-medium"
-                    >
-                      Cancel Appointment
-                    </motion.button>
-                  )}
-                  {canJoinLive(selected.status) && (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => {
-                        joinLive(selected);
-                        setSelected(null);
-                      }}
-                      className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg hover:from-green-600 hover:to-emerald-700 font-medium flex items-center justify-center gap-2"
-                    >
-                      <Video className="w-5 h-5" />
-                      Join Live Consultation
-                    </motion.button>
-                  )}
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setSelected(null)}
-                    className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
-                  >
-                    Close
-                  </motion.button>
-                </motion.div>
-              </motion.div>
+                  Close
+                </button>
+              </div>
             </div>
-          </>
-        )}
-      </AnimatePresence>
-    </motion.div>
+          </div>
+        </>
+      )}
+    </div>
   );
 };
 
 const StatusBadge = ({ status }) => {
-  const s = (status || "").toLowerCase();
-  
-  const statusConfig = {
-    pending: {
-      bg: "bg-gradient-to-r from-yellow-50 to-amber-50",
-      text: "text-yellow-700",
-      border: "border border-yellow-200",
-      icon: "⏳"
-    },
-    accepted: {
-      bg: "bg-gradient-to-r from-blue-50 to-sky-50",
-      text: "text-blue-700",
-      border: "border border-blue-200",
-      icon: "✓"
-    },
-    approved: {
-      bg: "bg-gradient-to-r from-green-50 to-emerald-50",
-      text: "text-green-700",
-      border: "border border-green-200",
-      icon: "✅"
-    },
-    completed: {
-      bg: "bg-gradient-to-r from-gray-50 to-gray-100",
-      text: "text-gray-700",
-      border: "border border-gray-300",
-      icon: "✓"
-    },
-    cancelled: {
-      bg: "bg-gradient-to-r from-red-50 to-pink-50",
-      text: "text-red-700",
-      border: "border border-red-200",
-      icon: "✗"
-    },
-    rejected: {
-      bg: "bg-gradient-to-r from-gray-50 to-gray-100",
-      text: "text-gray-700",
-      border: "border border-gray-300",
-      icon: "✗"
-    },
-    default: {
-      bg: "bg-gradient-to-r from-gray-50 to-gray-100",
-      text: "text-gray-700",
-      border: "border border-gray-300",
-      icon: "?"
-    }
+  const s = status?.toLowerCase() || "";
+  const getStyle = () => {
+    if (s === "pending")
+      return "bg-yellow-100 text-yellow-800 border-yellow-200";
+    if (s === "accepted") return "bg-blue-100 text-blue-800 border-blue-200";
+    if (s === "approved") return "bg-green-100 text-green-800 border-green-200";
+    if (s === "completed") return "bg-gray-100 text-gray-800 border-gray-300";
+    if (s === "cancelled" || s === "rejected")
+      return "bg-red-100 text-red-800 border-red-200";
+    return "bg-gray-100 text-gray-800 border-gray-300";
   };
-
-  const config = statusConfig[s] || statusConfig.default;
-
+  const icon =
+    {
+      pending: "⏳",
+      accepted: "✓",
+      approved: "✅",
+      completed: "✓",
+      cancelled: "✗",
+      rejected: "✗",
+    }[s] || "?";
   return (
-    <motion.span
-      whileHover={{ scale: 1.05 }}
-      className={`px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-2 ${config.bg} ${config.text} ${config.border}`}
+    <span
+      className={`px-4 py-1.5 rounded-full text-sm font-semibold flex items-center gap-2 border ${getStyle()}`}
     >
-      <span>{config.icon}</span>
-      {status || "Unknown"}
-    </motion.span>
+      <span>{icon}</span>
+      {status}
+    </span>
   );
 };
 
-export default PatientAppointment;
+export default DoctorSideAppointment;

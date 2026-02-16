@@ -1,43 +1,23 @@
-import { Bell, TextAlignStart } from "lucide-react";
+import { Bell, TextAlignStart, X, Video } from "lucide-react";
 import { useAuth } from "../contex/AuthContex";
 import logo from "/Company logo.png";
 import { useNavigate } from "react-router";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
-import api from "../api/api";
+
+
+import  {useNotifications}  from "../hooks/useNotifications";
+import { useVideoConsultation } from "../hooks/useVideoConsultation";
 
 const Navbar = ({ onHamburgerClick }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const [notification, setNotification] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(false);
+  // 🔔 Notification Hook
+  const { notifications, unreadCount, popupNotif, setPopupNotif } =
+    useNotifications();
 
-  // Fetch Notifications
-  useEffect(() => {
-    if (!user) return 
-  const fetchNotification = async () => {
-    try {
-      setLoading(true);
-      const res = await api.get("/notifications");
-
-      const list = res.data?.notification || [];
-      setNotification(list);
-
-      const unread = list.filter((n) => !n.isRead).length;
-      setUnreadCount(unread);
-
-    } catch (err) {
-      console.log("Notification Error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  
-    fetchNotification();
-  }, [user]);
+  // 🎥 Video Consultation Hook
+  const { activeAppointment, joinVideo } = useVideoConsultation();
 
   // Display Name Logic
   const displayname =
@@ -47,22 +27,17 @@ const Navbar = ({ onHamburgerClick }) => {
     (user?.role === "DOCTOR"
       ? "Doctor"
       : user?.role === "PATIENT"
-      ? "Patient"
-      : user?.role === "ADMIN"
-      ? "Admin"
-      : "Guest");
+        ? "Patient"
+        : user?.role === "ADMIN"
+          ? "Admin"
+          : "Guest");
 
-  // Settings Navigation
-  const settingPath = () => {
-    return "/setting/account";
-  };
+  const settingPath = () => "/setting/account";
 
   return (
     <div className="flex justify-between items-center bg-gray-300 dark:bg-gray-800 px-6 py-3 border-b dark:border-white/40 border-black/40 fixed top-0 left-0 right-0 md:left-64 z-50">
-      
       {/* Left Side */}
       <div className="flex items-center gap-2">
-        {/* Hamburger */}
         <motion.button
           whileTap={{ scale: 0.9 }}
           className="md:hidden cursor-pointer"
@@ -80,27 +55,60 @@ const Navbar = ({ onHamburgerClick }) => {
       </div>
 
       {/* Right Side */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 relative">
         {/* Profile Info */}
         <div className="text-black dark:text-white hidden md:block">
           <p className="text-base font-semibold">{displayname}</p>
           <p className="font-extralight text-sm">{user?.role}</p>
         </div>
 
-        {/* Notification Icon */}
-        { user && (<div className="relative inline-block">
-          <Bell
-            size={32}
-            className="cursor-pointer text-yellow-600 bell-dancing"
-            onClick={() => navigate("/notifications")}
-          />
+        {/* 🎥 Active Video Call Indicator */}
+        {activeAppointment && (
+          <button
+            onClick={joinVideo}
+            className="relative flex items-center gap-1 bg-red-600 text-white px-3 py-1 rounded-full text-xs animate-pulse"
+          >
+            <Video size={16} />
+            Join Call
+          </button>
+        )}
 
-          {unreadCount > 0 && (
-            <span className="absolute -top-2 -right-2 bg-amber-600 text-white text-[10px] px-1 py-1 rounded-full">
-              {unreadCount}
-            </span>
-          )}
-        </div>)}
+        {/* 🔔 Notification Icon */}
+        {user && (
+          <div className="relative inline-block">
+            <Bell
+              size={32}
+              className="cursor-pointer text-yellow-600"
+              onClick={() => navigate("/notifications")}
+            />
+
+            {unreadCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-amber-600 text-white text-[10px] px-1 py-1 rounded-full">
+                {unreadCount}
+              </span>
+            )}
+
+            {/* Popup Notification */}
+            {popupNotif && (
+              <div className="absolute right-0 top-10 w-64 bg-white dark:bg-gray-700 shadow-lg rounded-lg p-3 border border-gray-300 dark:border-gray-600 z-50">
+                <div className="flex justify-between items-start mb-1">
+                  <p className="font-semibold text-sm">
+                    {popupNotif.title || "New Notification"}
+                  </p>
+                  <X
+                    size={16}
+                    className="cursor-pointer"
+                    onClick={() => setPopupNotif(null)}
+                  />
+                </div>
+                <p className="text-xs">{popupNotif.message}</p>
+                <p className="text-[10px] text-gray-500 mt-1">
+                  {new Date(popupNotif.createdAt).toLocaleTimeString()}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Profile Avatar */}
         {user?.photo_url && (

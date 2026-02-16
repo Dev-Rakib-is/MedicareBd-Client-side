@@ -207,7 +207,6 @@ const Hero = () => {
                   <h3 className="text-xl font-bold text-gray-800 mb-2">
                     {featuredDoctor ? featuredDoctor.name : "Featured Doctor"}
                   </h3>
-                  {/* ✅ FIXED: specialization object থেকে name নিন */}
                   <p className="text-blue-600 font-medium mb-4">
                     {featuredDoctor
                       ? getSpecializationName(featuredDoctor.specialization)
@@ -226,7 +225,6 @@ const Hero = () => {
                         <span className="text-sm text-gray-600">
                           Available:
                         </span>
-                        {/* ✅ FIXED: workingHours object থেকে from/to নিন */}
                         <span className="text-green-600 font-bold">
                           {featuredDoctor.workingHours 
                             ? `${featuredDoctor.workingHours?.from || 'N/A'} - ${featuredDoctor.workingHours?.to || 'N/A'}`

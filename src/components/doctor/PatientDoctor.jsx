@@ -3,7 +3,7 @@ import api from "../../api/api";
 import DoctorList from "../doctor/DoctorList";
 import DoctorFilters from "../doctor/DoctorFilters";
 import BookingModal from "../doctor/BookingModal";
-import { Users, Shield, Star, RefreshCw, AlertCircle } from "lucide-react";
+import { Users, Shield, Star } from "lucide-react";
 
 const PatientDoctor = () => {
   const [doctors, setDoctors] = useState([]);
@@ -24,6 +24,7 @@ const PatientDoctor = () => {
     viewMode: "grid",
   });
 
+  // Normalize doctors data
   const normalizeDoctor = (d) => ({
     _id: d._id,
     name: d.name || "Unknown Doctor",
@@ -31,62 +32,85 @@ const PatientDoctor = () => {
     experience: d.experience || 0,
     fee: d.fee || 500,
     rating: d.rating || 4.5,
+    qualification: d.qualification || "Not specified",
     photo_url: d.photo_url || "/default-doctor.png",
     status: d.status || "APPROVED",
   });
 
-  const loadDoctors = async () => {
+  // Load doctors and specializations from backend
+  const loadDoctorsAndSpecializations = async () => {
     try {
       setLoading(true);
       setError("");
 
       const [doctorRes, specRes] = await Promise.all([
         api.get("/doctors"),
-        api.get("/departments"),
+        api.get("/specializations"),
       ]);
 
       const normalizedDoctors = (doctorRes.data?.doctors || []).map(
         normalizeDoctor,
       );
-      const specs = specRes.data?.specializations || [];
+      const specs = specRes.data?.data || [];
 
       setDoctors(normalizedDoctors);
       setFilteredDoctors(normalizedDoctors);
       setSpecializations(specs);
     } catch (err) {
       console.error(err);
-      setError("Unable to load doctors.");
+      setError("Unable to load doctors or specializations.");
       setDoctors([]);
       setFilteredDoctors([]);
+      setSpecializations([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadDoctors();
+    loadDoctorsAndSpecializations();
   }, []);
 
   // Filter & Sort
   useEffect(() => {
     let list = [...doctors];
 
-    if (filters.search)
-      list = list.filter(
-        (d) =>
-          d.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-          d.specialization.toLowerCase().includes(filters.search.toLowerCase()),
-      );
+    if (filters.search) {
+      const query = filters.search.toLowerCase().trim();
 
-    if (filters.selectedSpec)
-      list = list.filter((d) => d.specialization === filters.selectedSpec);
+      list = list.filter((d) => {
+        const specName =
+          typeof d.specialization === "object"
+            ? d.specialization.name.toLowerCase()
+            : String(d.specialization || "").toLowerCase();
+
+        const qualification = d.qualification
+          ? d.qualification.toLowerCase()
+          : "";
+
+        return (
+          d.name.toLowerCase().includes(query) ||
+          specName.includes(query) ||
+          qualification.includes(query)
+        );
+      });
+    }
+
+    if (filters.selectedSpec) {
+      list = list.filter((d) => {
+        const specName =
+          typeof d.specialization === "object"
+            ? d.specialization.name
+            : d.specialization;
+        return specName === filters.selectedSpec;
+      });
+    }
 
     if (filters.selectedExperience !== "all") {
       const [min, max] = filters.selectedExperience.split("-").map(Number);
-      list = list.filter((d) => {
-        const exp = d.experience;
-        return max ? exp >= min && exp <= max : exp >= min;
-      });
+      list = list.filter((d) =>
+        max ? d.experience >= min && d.experience <= max : d.experience >= min,
+      );
     }
 
     list = list.filter(
@@ -132,6 +156,7 @@ const PatientDoctor = () => {
     setSelectedDoctor(doctor);
     setShowBookingModal(true);
   };
+
   const closeBooking = () => {
     setSelectedDoctor(null);
     setShowBookingModal(false);
@@ -176,7 +201,10 @@ const PatientDoctor = () => {
       ) : (
         <div className="text-center p-16 bg-white rounded shadow mt-6">
           <p>No doctors found.</p>
-          <button onClick={loadDoctors} className="text-blue-600 mt-2">
+          <button
+            onClick={loadDoctorsAndSpecializations}
+            className="text-blue-600 mt-2"
+          >
             Refresh
           </button>
         </div>
@@ -185,7 +213,7 @@ const PatientDoctor = () => {
       {/* Booking Modal */}
       {showBookingModal && selectedDoctor && (
         <BookingModal
-          doctor={selectedDoctor}
+          doctorId={selectedDoctor?._id}
           onClose={closeBooking}
           onConfirm={() => alert(`Booked with ${selectedDoctor.name}`)}
         />

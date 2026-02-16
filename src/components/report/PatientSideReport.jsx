@@ -19,7 +19,7 @@ const PatientReports = () => {
   useEffect(() => {
     fetchReports();
   }, []);
-
+ 
   const handleDelete = async (id) => {
     await api.delete(`/reports/${id}`);
     setReports((s) => s.filter((r) => r._id !== id));

@@ -76,13 +76,13 @@ const AccountSettings = () => {
       formData.append("interests", interests);
       formData.append("email", email);
       formData.append("phone", phone);
-      if (photo) formData.append("photo", photo); // Cloudinary supported on server
+      if (photo) formData.append("photo", photo); 
 
       const res = await api.patch("/auth/me", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      setUserPhoto(res.data.user.photo_url); // Update preview
+      setUserPhoto(res.data.user.photo_url); 
       setSuccess("Profile updated successfully!");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to update profile");

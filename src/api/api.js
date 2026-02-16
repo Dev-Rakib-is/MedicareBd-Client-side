@@ -9,7 +9,7 @@ const api = axios.create({
 //  Request interceptor to dynamically set Authorization header
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("token"); 
+    const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -20,7 +20,7 @@ api.interceptors.request.use(
 
 //  Response interceptor to handle 401 (token expired)
 api.interceptors.response.use(
-  (response) => response, 
+  (response) => response,
   async (error) => {
     const originalRequest = error.config;
 

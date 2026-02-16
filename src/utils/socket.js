@@ -1,21 +1,33 @@
+import { io } from "socket.io-client";
 
-import { io } from 'socket.io-client';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_SERVER;
 
-const SOCKET_URL = "https://medicarebd-server-side-1.onrender.com";
-
+if (!SOCKET_URL) {
+  console.error("❌ VITE_SOCKET_SERVER missing in .env file");
+}
 
 const socket = io(SOCKET_URL, {
   withCredentials: true,
-  transports: ['polling'],
+
+  // IMPORTANT SETTINGS
+  autoConnect: false, 
+  transports: ["websocket"],
   reconnection: true,
-  reconnectionAttempts: 10
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
 });
 
-socket.on('connect', () => {
-  console.log('✅ Connected to Socket.io server');
+// ===== Optional Debug Logs =====
+socket.on("connect", () => {
+  console.log("✅ Socket connected:", socket.id);
 });
 
+socket.on("disconnect", (reason) => {
+  console.log("⚠️ Socket disconnected:", reason);
+});
 
-
+socket.on("connect_error", (err) => {
+  console.error("❌ Socket connection error:", err.message);
+});
 
 export default socket;

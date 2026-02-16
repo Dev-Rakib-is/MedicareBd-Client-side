@@ -12,12 +12,12 @@ import AccountSettings from "./page/AccountSettings";
 import PreferenceSettings from "./page/PreferenceSettings";
 import NotificationSettings from "./page/NotificationSettings";
 import SecuritySettings from "./page/SecuritySettings";
-import Notification from "./page/Notification";
+import Notification from "./page/notifications";
 import Dashboard from "./page/Dashboard";
 import Appointment from "./page/Appointment";
 import BillsPage from "./page/Bill";
 import Documents from "./page/Documents";
-import LiveConsultation from "./page/LiveConsultations";
+import LiveConsultation from "./page/LiveConsultation";
 import NoticeBoard from "./page/NoticeBoard";
 import Invoice from "./page/Incoice";
 import Payroll from "./page/Payroll";
@@ -87,7 +87,7 @@ function App() {
           <Route path="/notice" element={<NoticeBoard />} />
           <Route path="/bills" element={<BillsPage />} />
           <Route path="/documents" element={<Documents />} />
-          <Route path="/consultations" element={<LiveConsultation />} />
+          <Route path="/consultations/:roomId?" element={<LiveConsultation />} />
           <Route path="/invoice" element={<Invoice />} />
           <Route path="/payroll" element={<Payroll />} />
           <Route path="/patients" element={<PatientsPage />} />
@@ -120,11 +120,10 @@ function App() {
 
           {/* Doctor Routes with Guard */}
           <Route
-            path="/doctor"
+            path="/doctors"
             element={
               <ProtectedRoute>
-                <Route path="/doctor" element={<AdminDoctors />} />
-                <Route path="/doctor" element={<PatientDoctor />} />
+                {user?.role == "ADMIN" ? <AdminDoctors /> : <PatientDoctor />}
               </ProtectedRoute>
             }
           />

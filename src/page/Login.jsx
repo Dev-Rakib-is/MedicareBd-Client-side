@@ -5,14 +5,14 @@ import { motion } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
 
 const Login = () => {
-  const { login, loginWithFirebase, sendOtp, verifyOtp } = useAuth();
+  const { login, sendOtp, verifyOtp } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("PATIENT"); // Default role
+  const [role, setRole] = useState("PATIENT"); 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -28,7 +28,7 @@ const Login = () => {
       await login({ email, password, role });
 
       // Role-based redirect
-      if (role === "ADMIN") navigate("/admin/dashboard");
+      if (role === "ADMIN") navigate("/dashboard");
       else if (role === "DOCTOR") navigate("/");
       else navigate("/"); 
     } catch (err) {
@@ -61,9 +61,9 @@ const Login = () => {
       await verifyOtp({ phone, otp, role });
 
       // Role-based redirect
-      if (role === "ADMIN") navigate("/admin/dashboard");
+      if (role === "ADMIN") navigate("/dashboard");
       else if (role === "DOCTOR") navigate("/dashboard");
-      else navigate("/"); // PATIENT
+      else navigate("/"); 
     } catch (err) {
       setError(err.response?.data?.message || "OTP Verification Failed");
       setTimeout(() => setError(""), 3000);

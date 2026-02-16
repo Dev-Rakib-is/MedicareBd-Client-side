@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import api from "../api/api";
-import { io } from "socket.io-client";
+import api from "../api/api"; 
+import socket from '../utils/socket';
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState([]);
@@ -12,28 +12,19 @@ export function useNotifications() {
   const [total, setTotal] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    fetchNotifications();
-    
-    // Real-time socket connection
-    const socket = io("https://madicarebd.onrender.com");
-    socket.on("new-notification", (notif) => {
-      setNotifications(prev => [notif, ...prev]);
-      setUnreadCount(prev => prev + 1);
-    });
-
-    return () => socket.disconnect();
-  }, []);
-
+  // Fetch Notifications
   const fetchNotifications = async () => {
     try {
       setLoading(true);
       const res = await api.get(`/notifications`, {
-        params: { search, page, limit }
+        params: { search, page, limit },
       });
-      setNotifications(res.data.notifications);
-      setTotal(res.data.total);
-      const unread = res.data.notifications.filter(n => !n.read).length;
+
+      const list = res.data.notifications || [];
+      setNotifications(list);
+      setTotal(res.data.total || 0);
+
+      const unread = list.filter((n) => !n.read).length;
       setUnreadCount(unread);
     } catch (err) {
       setError(err.message || "Failed to load notifications");
@@ -42,17 +33,39 @@ export function useNotifications() {
     }
   };
 
+  // Mark notification as read/unread
   const markAsRead = async (id, read) => {
     try {
       await api.patch(`/notifications/${id}`, { read });
-      setNotifications(prev =>
-        prev.map(n => n._id === id ? { ...n, read } : n)
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, read } : n)),
       );
-      setUnreadCount(prev => read ? prev - 1 : prev + 1);
+      setUnreadCount((prev) => (read ? prev - 1 : prev + 1));
     } catch (err) {
       console.error(err);
     }
   };
+
+  // Setup socket connection & real-time updates
+  useEffect(() => {
+    fetchNotifications();
+
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    // Listen for new notifications
+    const handleNewNotification = (notif) => {
+      setNotifications((prev) => [notif, ...prev]);
+      if (!notif.read) setUnreadCount((prev) => prev + 1);
+    };
+
+    socket.on("new-notification", handleNewNotification);
+
+    return () => {
+      socket.off("new-notification", handleNewNotification);
+    };
+  }, [page, search]);
 
   return {
     notifications,

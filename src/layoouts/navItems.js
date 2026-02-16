@@ -34,11 +34,12 @@ export const navItems = {
     { label: "Dashboard", to: "/dashboard" },
     { label: "Users", to: "/admin/users" },
     { label: "Doctors", to: "/doctors" },
-    { label: "Appointments", to: "/admin/appointments" },
+    { label: "Appointments", to: "/appointment" },
     { label: "Payments", to: "/admin/payments" },
     { label: "Reports", to: "/admin/reports" },
   ],
 
+  // ================= PUBLIC (Guest) =================
   PUBLIC: [
     { label: "Home", to: "/" },
     { label: "Login", to: "/login" },
@@ -46,8 +47,17 @@ export const navItems = {
   ],
 };
 
-export const getNavByRole = (role) => [
-  ...navItems.COMMON,
-  ...(navItems[role] || navItems.PUBLIC),
-  { label: "Settings", to: "/setting/account" },
-];
+// ================= get navigation by role =================
+export const getNavByRole = (role) => {
+  // Guest user / PUBLIC
+  if (!role || role === "PUBLIC") {
+    return [...navItems.PUBLIC];
+  }
+
+  // Logged-in user
+  return [
+    ...navItems.COMMON,
+    ...(navItems[role] || []),
+    { label: "Settings", to: "/setting/account" },
+  ];
+};

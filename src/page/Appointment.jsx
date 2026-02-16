@@ -1,3 +1,4 @@
+import AdminAppointments from "../components/appointment/AdminAppointment";
 import DoctorSideAppointment from "../components/appointment/DoctorSideAppointment";
 import PatientSideAppointment from "../components/appointment/PatientSideAppointment";
 import { useAuth } from "../contex/AuthContex";
@@ -9,6 +10,8 @@ const Appointment = () => {
   switch (user.role) {
     case "PATIENT":
       return <PatientSideAppointment />;
+    case "ADMIN":
+      return <AdminAppointments />;
     case "DOCTOR":
       return <DoctorSideAppointment />;
     default:

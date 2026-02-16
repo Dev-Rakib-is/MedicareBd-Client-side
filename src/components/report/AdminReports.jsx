@@ -6,12 +6,12 @@ export default function AdminReports() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch all reports (admin)
+  // Fetch all reports admin
   const fetchReports = async () => {
     try {
       setLoading(true);
-      const res = await api.get("/reports"); 
-      setReports(res.data || []); 
+      const res = await api.get("/reports");
+      setReports(res.data.data || []);
     } catch (err) {
       console.error(err);
       setError("Failed to load admin reports");

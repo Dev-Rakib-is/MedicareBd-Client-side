@@ -1,7 +1,15 @@
 import { Search, Grid, Menu } from "lucide-react";
 
 const DoctorFilters = ({ filters, setFilters, specializations }) => {
-  const { search, selectedSpec, selectedSort, selectedAvailability, selectedExperience, priceRange, viewMode } = filters;
+  const {
+    search,
+    selectedSpec,
+    selectedSort,
+    selectedAvailability,
+    selectedExperience,
+    priceRange,
+    viewMode,
+  } = filters;
 
   const handlePriceChange = (value) => {
     setFilters({ ...filters, priceRange: [0, parseInt(value)] });
@@ -29,9 +37,11 @@ const DoctorFilters = ({ filters, setFilters, specializations }) => {
             <input
               type="text"
               placeholder="Search by doctor name, specialization, or qualification..."
-              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-0"
               value={search}
-              onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              onChange={(e) =>
+                setFilters({ ...filters, search: e.target.value })
+              }
             />
           </div>
         </div>
@@ -41,14 +51,17 @@ const DoctorFilters = ({ filters, setFilters, specializations }) => {
           <select
             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             value={selectedSpec}
-            onChange={(e) => setFilters({ ...filters, selectedSpec: e.target.value })}
+            onChange={(e) =>
+              setFilters({ ...filters, selectedSpec: e.target.value })
+            }
           >
             <option value="">All Specializations</option>
-            {specializations.map((sp) => (
-              <option key={sp._id || sp.name} value={sp.name}>
-                {sp.name} {sp.count && `(${sp.count})`}
-              </option>
-            ))}
+            {Array.isArray(specializations) &&
+              specializations.map((sp) => (
+                <option key={sp._id || sp.name} value={sp.name}>
+                  {sp.name} {sp.count && `(${sp.count})`}
+                </option>
+              ))}
           </select>
         </div>
 
@@ -57,7 +70,9 @@ const DoctorFilters = ({ filters, setFilters, specializations }) => {
           <select
             className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             value={selectedSort}
-            onChange={(e) => setFilters({ ...filters, selectedSort: e.target.value })}
+            onChange={(e) =>
+              setFilters({ ...filters, selectedSort: e.target.value })
+            }
           >
             <option value="recommended">Recommended</option>
             <option value="rating">Highest Rated</option>
@@ -71,7 +86,9 @@ const DoctorFilters = ({ filters, setFilters, specializations }) => {
         <div className="lg:col-span-4 grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
           {/* Availability */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Availability</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Availability
+            </label>
             <div className="flex gap-2">
               {["all", "online", "today"].map((type) => (
                 <button
@@ -81,9 +98,15 @@ const DoctorFilters = ({ filters, setFilters, specializations }) => {
                       ? "bg-blue-600 text-white shadow"
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
-                  onClick={() => setFilters({ ...filters, selectedAvailability: type })}
+                  onClick={() =>
+                    setFilters({ ...filters, selectedAvailability: type })
+                  }
                 >
-                  {type === "all" ? "All" : type === "online" ? "Online Now" : "Available Today"}
+                  {type === "all"
+                    ? "All"
+                    : type === "online"
+                      ? "Online Now"
+                      : "Available Today"}
                 </button>
               ))}
             </div>
@@ -91,11 +114,15 @@ const DoctorFilters = ({ filters, setFilters, specializations }) => {
 
           {/* Experience */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Experience</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Experience
+            </label>
             <select
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={selectedExperience}
-              onChange={(e) => setFilters({ ...filters, selectedExperience: e.target.value })}
+              onChange={(e) =>
+                setFilters({ ...filters, selectedExperience: e.target.value })
+              }
             >
               <option value="all">Any Experience</option>
               <option value="0-5">0-5 years</option>
@@ -112,7 +139,9 @@ const DoctorFilters = ({ filters, setFilters, specializations }) => {
                 Fee Range: {priceRange[0]}৳ - {priceRange[1]}৳
               </label>
               <button
-                onClick={() => setFilters({ ...filters, priceRange: [0, 5000] })}
+                onClick={() =>
+                  setFilters({ ...filters, priceRange: [0, 5000] })
+                }
                 className="text-xs text-blue-600 hover:text-blue-800"
               >
                 Reset
@@ -145,7 +174,7 @@ const DoctorFilters = ({ filters, setFilters, specializations }) => {
               Clear All Filters
             </button>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-500 hidden md:block">View:</span>
             <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
