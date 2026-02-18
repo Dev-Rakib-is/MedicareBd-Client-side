@@ -12,7 +12,7 @@ const Login = () => {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("PATIENT"); 
+  const [role, setRole] = useState("PATIENT");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -23,16 +23,28 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+
+    console.log("Login attempt with:", {
+      email: email.trim(),
+      password: password,
+      role,
+    });
+
     try {
       setLoading(true);
-      await login({ email, password, role });
+
+      // Pass raw password directly to backend
+      const data = await login({ email: email.trim(), password, role });
+
+      console.log("Login response:", data);
 
       // Role-based redirect
       if (role === "ADMIN") navigate("/dashboard");
       else if (role === "DOCTOR") navigate("/");
-      else navigate("/"); 
+      else navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Login Failed");
+      console.error("Login error:", err);
+      setError(err.message || err.response?.data?.message || "Login Failed");
       setTimeout(() => setError(""), 3000);
     } finally {
       setLoading(false);
@@ -47,7 +59,9 @@ const Login = () => {
       await sendOtp({ phone, role });
       setOtpSent(true);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to send OTP");
+      setError(
+        err.message || err.response?.data?.message || "Failed to send OTP",
+      );
       setTimeout(() => setError(""), 3000);
     } finally {
       setLoading(false);
@@ -63,9 +77,11 @@ const Login = () => {
       // Role-based redirect
       if (role === "ADMIN") navigate("/dashboard");
       else if (role === "DOCTOR") navigate("/dashboard");
-      else navigate("/"); 
+      else navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "OTP Verification Failed");
+      setError(
+        err.message || err.response?.data?.message || "OTP Verification Failed",
+      );
       setTimeout(() => setError(""), 3000);
     } finally {
       setLoading(false);
@@ -175,7 +191,11 @@ const Login = () => {
           disabled={loading}
           type="submit"
           onClick={
-            isOtpLogin ? (otpSent ? handleVerifyOtp : handleSendOtp) : handleLogin
+            isOtpLogin
+              ? otpSent
+                ? handleVerifyOtp
+                : handleSendOtp
+              : handleLogin
           }
           className={`w-full py-3 rounded-xl text-white border font-semibold text-lg shadow-md${
             loading
@@ -186,10 +206,10 @@ const Login = () => {
           {loading
             ? "Processing..."
             : isOtpLogin
-            ? otpSent
-              ? "Verify OTP"
-              : "Send OTP"
-            : "Login"}
+              ? otpSent
+                ? "Verify OTP"
+                : "Send OTP"
+              : "Login"}
         </motion.button>
 
         {error && <p className="text-center text-red-600">{error}</p>}

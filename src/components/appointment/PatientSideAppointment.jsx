@@ -1,153 +1,111 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
-import {
-  createClient,
-  createLocalTracks,
-  leaveCall,
-  APP_ID,
-} from "../../utils/agoraClient";
+import { Calendar } from "lucide-react";
 
-const PatientLiveConsultation = ({
-  appointmentId,
-  doctorName = "Doctor",
-  onEndCall,
-}) => {
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
+const PatientSideAppointments = () => {
+  const [appointments, setAppointments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const clientRef = useRef(null);
-  const tracksRef = useRef([]);
+  const navigate = useNavigate();
 
-  const [micOn, setMicOn] = useState(true);
-  const [camOn, setCamOn] = useState(true);
-  const [status, setStatus] = useState("waiting");
-  // waiting | connecting | connected
+  // ================= FETCH APPOINTMENTS =================
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get("/appointments/patient");
+      setAppointments(data.appointments || []);
+    } catch (err) {
+      console.error(err);
+      setError(err.response?.data?.message || "Failed to fetch appointments");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const channelName = appointmentId ? `consult_${appointmentId}` : null;
-
-  // ================= JOIN =================
   useEffect(() => {
-    if (!channelName) return;
-
-    const startCall = async () => {
-      try {
-        setStatus("connecting");
-
-        const client = createClient();
-        clientRef.current = client;
-
-        const uid = Math.floor(Math.random() * 100000);
-
-        const { data } = await api.post("/agora/token", { channelName, uid });
-
-        await client.join(APP_ID, channelName, data.token, uid);
-
-        const tracks = await createLocalTracks();
-        tracksRef.current = tracks;
-
-        tracks[1].play(localVideoRef.current);
-
-        await client.publish(tracks);
-
-        client.on("user-published", async (user, mediaType) => {
-          await client.subscribe(user, mediaType);
-          if (mediaType === "video")
-            user.videoTrack.play(remoteVideoRef.current);
-          if (mediaType === "audio") user.audioTrack.play();
-        });
-
-        setStatus("connected");
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    startCall();
-
-    return () => leaveCall(clientRef.current, tracksRef.current);
-  }, [channelName]);
-
-  // ================= CONTROLS =================
-  const toggleMic = async () => {
-    const mic = tracksRef.current[0];
-    if (!mic) return;
-    await mic.setEnabled(!micOn);
-    setMicOn(!micOn);
-  };
-
-  const toggleCam = async () => {
-    const cam = tracksRef.current[1];
-    if (!cam) return;
-    await cam.setEnabled(!camOn);
-    setCamOn(!camOn);
-  };
-
-  const handleEndCall = async () => {
-    await leaveCall(clientRef.current, tracksRef.current);
-    onEndCall?.();
-  };
+    fetchAppointments();
+  }, []);
 
   // ================= UI =================
   return (
-    <div className="relative h-screen bg-gray-900 text-white flex flex-col">
-      {/* HEADER */}
-      <div className="p-4 bg-gray-800 shadow text-center font-semibold">
-        Live Consultation • Dr. {doctorName}
-      </div>
+    <div className="p-2 mt-16 bg-gray-50 dark:bg-gray-900">
+      <h2 className="text-2xl font-semibold mb-6 text-gray-800 dark:text-white">
+        My Appointments
+      </h2>
 
-      {/* VIDEO AREA */}
-      <div className="flex-1 relative">
-        {/* Remote */}
-        <div ref={remoteVideoRef} className="w-full h-full bg-black" />
+      {loading && <p className="text-center">Loading appointments...</p>}
+      {error && <p className="text-center text-red-600">{error}</p>}
 
-        {/* Local */}
-        <div className="absolute bottom-6 right-6 w-40 h-32 rounded-xl overflow-hidden border-2 border-white/30 bg-black">
-          <div ref={localVideoRef} className="w-full h-full" />
-        </div>
+      {!loading && appointments.length === 0 && (
+        <p className="text-center text-gray-600 dark:text-gray-300">
+          No appointments found
+        </p>
+      )}
 
-        {/* WAITING SCREEN */}
-        {status === "waiting" && (
-          <div className="absolute inset-0 flex items-center justify-center text-xl">
-            Waiting for doctor to join...
+      <div className="grid gap-4">
+        {appointments.map((a) => (
+          <div
+            key={a._id}
+            className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow flex justify-between items-center"
+          >
+            <div>
+              <h3 className="font-semibold text-gray-800 dark:text-white">
+                Dr. {a.doctor?.name || "Doctor"}
+              </h3>
+
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 mt-1">
+                <Calendar className="w-4 h-4" />
+                <span>
+                  {a.date ? new Date(a.date).toLocaleString() : "Date not set"}
+                </span>
+              </div>
+
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+                Status: {a.status || "Pending"}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {/* Join Live Button */}
+              {["Scheduled", "ACCEPTED"].includes(a.status) && (
+                <button
+                  onClick={() => navigate(`/consultations/${a._id}`)}
+                  className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                >
+                  Join Live
+                </button>
+              )}
+
+              {/* Cancel Button */}
+              {["Scheduled", "ACCEPTED"].includes(a.status) && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await api.patch("/appointments/patient/cancel", {
+                        appointmentId: a._id,
+                      });
+                      fetchAppointments();
+                    } catch (err) {
+                      console.error(err);
+                      setError(
+                        err.response?.data?.message || "Failed to cancel",
+                      );
+                      setTimeout(() => setError(""), 3000);
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
           </div>
-        )}
-
-        {status === "connecting" && (
-          <div className="absolute inset-0 flex items-center justify-center text-xl">
-            Connecting...
-          </div>
-        )}
-      </div>
-
-      {/* CONTROLS */}
-      <div className="p-4 flex justify-center gap-4 bg-gray-800">
-        <button
-          onClick={toggleMic}
-          className={`px-4 py-2 rounded ${
-            micOn ? "bg-green-600" : "bg-red-600"
-          }`}
-        >
-          Mic
-        </button>
-
-        <button
-          onClick={toggleCam}
-          className={`px-4 py-2 rounded ${
-            camOn ? "bg-green-600" : "bg-red-600"
-          }`}
-        >
-          Cam
-        </button>
-
-        <button
-          onClick={handleEndCall}
-          className="px-4 py-2 rounded bg-red-700"
-        >
-          End
-        </button>
+        ))}
       </div>
     </div>
   );
 };
 
-export default PatientLiveConsultation;
+export default PatientSideAppointments;

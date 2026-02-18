@@ -1,4 +1,11 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
 import api from "../api/api";
 import socket from "../utils/socket.js";
 
@@ -9,41 +16,51 @@ export const AuthProvider = ({ children }) => {
     try {
       const savedUser = localStorage.getItem("user");
       return savedUser ? JSON.parse(savedUser) : null;
-    } catch (err) {
+    } catch {
       return null;
     }
   });
-  const [loading, setLoading] = useState(false);
-  const socketRegistered = useRef(false); 
-  // Helper: get token from localStorage
+
+  const [loading, setLoading] = useState(true);
+  const socketRegistered = useRef(false);
+
   const getToken = () => localStorage.getItem("token");
 
-  //  Check user auth from server
+  // ----------------------------
+  // CHECK AUTH
+  // ----------------------------
   const checkAuth = useCallback(async () => {
     const token = getToken();
+
     if (!token) {
       setUser(null);
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
     try {
       const { data } = await api.get("/auth/me", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+
       setUser(data.user);
       localStorage.setItem("user", JSON.stringify(data.user));
-      if (data.user && data.user._id && !socketRegistered.current) {
+
+      if (data.user?._id && !socketRegistered.current) {
         socket.emit("register-user", data.user._id);
         socketRegistered.current = true;
       }
     } catch (err) {
-      setUser(null);
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
-      socketRegistered.current = false; 
+      console.log("Auth check failed:", err?.response?.data || err.message);
+
+      // ❗ Token remove only if 401
+      if (err?.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setUser(null);
+      }
     } finally {
       setLoading(false);
     }
@@ -53,10 +70,11 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, [checkAuth]);
 
+  // ----------------------------
+  // SOCKET LISTENERS
+  // ----------------------------
   useEffect(() => {
-
     socket.on("user-online", (data) => {
-
       console.log(`User ${data.userId} is online`);
     });
 
@@ -65,24 +83,29 @@ export const AuthProvider = ({ children }) => {
     });
 
     return () => {
-      // Cleanup listeners
       socket.off("user-online");
       socket.off("user-offline");
     };
   }, []);
 
-  // Login
+  // LOGIN
+
   const login = async ({ email, password, role }) => {
     setLoading(true);
     try {
       const { data } = await api.post("/auth/login", { email, password, role });
-      setUser(data.user);
+
+      // Correct token saving
+      localStorage.setItem("token", data.accessToken);
+      localStorage.setItem("refreshToken", data.refreshToken);
       localStorage.setItem("user", JSON.stringify(data.user));
-      localStorage.setItem("token", data.token); 
-      if (data.user && data.user._id) {
+      setUser(data.user);
+
+      if (data.user?._id) {
         socket.emit("register-user", data.user._id);
         socketRegistered.current = true;
       }
+
       return data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -91,18 +114,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Register Patient
+  // REGISTER PATIENT
+
   const registerPatient = async (patientData) => {
     setLoading(true);
     try {
       const { data } = await api.post("/auth/register/patient", patientData);
-      setUser(data.user);
-      localStorage.setItem("user", JSON.stringify(data.user));
+
       localStorage.setItem("token", data.token);
-      if (data.user && data.user._id) {
+      localStorage.setItem("user", JSON.stringify(data.user));
+      setUser(data.user);
+
+      if (data.user?._id) {
         socket.emit("register-user", data.user._id);
         socketRegistered.current = true;
       }
+
       return data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -111,18 +138,22 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Register Doctor
+  // REGISTER DOCTOR
+
   const registerDoctor = async (doctorData) => {
     setLoading(true);
     try {
       const { data } = await api.post("/auth/register/doctor", doctorData);
-      setUser(data.user);
-      localStorage.setItem("user", JSON.stringify(data.user));
+
       localStorage.setItem("token", data.token);
-      if (data.user && data.user._id) {
+      localStorage.setItem("user", JSON.stringify(data.user));
+      setUser(data.user);
+
+      if (data.user?._id) {
         socket.emit("register-user", data.user._id);
         socketRegistered.current = true;
       }
+
       return data;
     } catch (error) {
       throw error.response?.data || error.message;
@@ -131,17 +162,27 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout
-  const logout = async () => {
+  // LOGOUT
+
+  const logout = () => {
     setUser(null);
     localStorage.removeItem("user");
     localStorage.removeItem("token");
-    socketRegistered.current = false; 
+
+    socketRegistered.current = false;
+    socket.disconnect();
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, login, registerPatient, registerDoctor, logout }}
+      value={{
+        user,
+        loading,
+        login,
+        registerPatient,
+        registerDoctor,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>

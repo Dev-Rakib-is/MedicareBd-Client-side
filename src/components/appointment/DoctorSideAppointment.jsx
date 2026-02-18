@@ -67,13 +67,19 @@ const DoctorSideAppointment = () => {
     }
   };
 
-  const formatDate = (d) =>
-    new Date(d + "T00:00:00").toLocaleDateString("en-US", {
+  const formatDate = (date) => {
+    if (!date) return "No date";
+
+    const d = new Date(date);
+    if (isNaN(d)) return "Invalid date";
+
+    return d.toLocaleDateString("en-US", {
       weekday: "short",
       year: "numeric",
       month: "short",
       day: "numeric",
     });
+  };
 
   return (
     <div className="p-6 max-w-5xl mx-auto mt-16 space-y-6">

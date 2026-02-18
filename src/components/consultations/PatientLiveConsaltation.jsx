@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import Swal from "sweetalert2";
 import api from "../../api/api";
 import {
   createClient,
@@ -58,7 +59,11 @@ const PatientLiveConsultation = ({
         setStatus("connected");
       } catch (err) {
         console.error(err);
-        alert("Microphone or Camera access denied. Please allow permissions.");
+        Swal.fire({
+          icon: "error",
+          title: "Permission Denied",
+          text: "Microphone or Camera access denied. Please allow permissions.",
+        });
         setStatus("waiting");
       }
     };
@@ -83,9 +88,24 @@ const PatientLiveConsultation = ({
   };
 
   const handleEndCall = async () => {
-    if (window.confirm("End this consultation?")) {
+    const result = await Swal.fire({
+      title: "End Consultation?",
+      text: "Are you sure you want to end this consultation?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, End",
+      cancelButtonText: "Cancel",
+    });
+
+    if (result.isConfirmed) {
       await leaveCall(clientRef.current, tracksRef.current);
       await api.post("/consultations/end", { appointmentId });
+      Swal.fire({
+        icon: "success",
+        title: "Consultation Ended",
+        timer: 1500,
+        showConfirmButton: false,
+      });
       onEndCall?.();
     }
   };
@@ -123,13 +143,17 @@ const PatientLiveConsultation = ({
       <div className="p-4 flex justify-center gap-4 bg-gray-800">
         <button
           onClick={toggleMic}
-          className={`px-4 py-2 rounded ${micOn ? "bg-green-600" : "bg-red-600"}`}
+          className={`px-4 py-2 rounded ${
+            micOn ? "bg-green-600" : "bg-red-600"
+          }`}
         >
           Mic
         </button>
         <button
           onClick={toggleCam}
-          className={`px-4 py-2 rounded ${camOn ? "bg-green-600" : "bg-red-600"}`}
+          className={`px-4 py-2 rounded ${
+            camOn ? "bg-green-600" : "bg-red-600"
+          }`}
         >
           Cam
         </button>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import api from "../api/api"; 
-import socket from '../utils/socket';
+import api from "../api/api";
+import socket from "../utils/socket";
 
 export function useNotifications() {
   const [notifications, setNotifications] = useState([]);
@@ -12,8 +12,14 @@ export function useNotifications() {
   const [total, setTotal] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Fetch Notifications
+  // Fetch Notifications – শুধু টোকেন থাকলে
   const fetchNotifications = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      setLoading(false);
+      return; // লগইন না থাকলে কল করবে না
+    }
+
     try {
       setLoading(true);
       const res = await api.get(`/notifications`, {
@@ -54,7 +60,6 @@ export function useNotifications() {
       socket.connect();
     }
 
-    // Listen for new notifications
     const handleNewNotification = (notif) => {
       setNotifications((prev) => [notif, ...prev]);
       if (!notif.read) setUnreadCount((prev) => prev + 1);

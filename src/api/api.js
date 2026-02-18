@@ -1,46 +1,40 @@
 import axios from "axios";
 
-//  Create Axios instance
+// ================= AXIOS INSTANCE =================
 const api = axios.create({
   baseURL: "https://medicarebd-server-side-1.onrender.com/api/v1",
-  withCredentials: true, // cookies support
+  withCredentials: false,
 });
 
-//  Request interceptor to dynamically set Authorization header
+// ================= REQUEST INTERCEPTOR =================
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
   (error) => Promise.reject(error),
 );
 
-//  Response interceptor to handle 401 (token expired)
+// ================= RESPONSE INTERCEPTOR =================
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+  (error) => {
+    const status = error.response?.status;
 
-    // Prevent infinite retry loop
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
+    if (status === 401) {
+      console.warn("Unauthorized. Logging out...");
 
-      try {
-        // Call refresh token endpoint
-        const res = await api.post("/auth/refresh-token");
+      localStorage.removeItem("token");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
 
-        // Save new token in localStorage
-        if (res.data?.token) {
-          localStorage.setItem("token", res.data.token);
-        }
-
-        // Retry the original request
-        return api(originalRequest);
-      } catch (err) {
-        localStorage.removeItem("token");
+      // Prevent multiple redirects loop
+      if (window.location.pathname !== "/login") {
         window.location.href = "/login";
       }
     }
