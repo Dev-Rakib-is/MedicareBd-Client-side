@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import socket from "../../utils/socket"; 
+import socket from "../../utils/socket";
 import api from "../../api/api";
 
 const AdminNotificationPanel = () => {
@@ -72,7 +72,7 @@ const AdminNotificationPanel = () => {
 
     socket.on("newNotification", handleNotification);
 
-    // ✅ cleanup only listener (NOT disconnect)
+    // cleanup only listener (NOT disconnect)
     return () => {
       socket.off("newNotification", handleNotification);
     };
@@ -84,6 +84,7 @@ const AdminNotificationPanel = () => {
 
     try {
       const res = await api.get("/notifications/admin?page=1&limit=50");
+      console.log(res.data.notifications);
       setNotifications(res.data.notifications || []);
       setUnreadCount(res.data.unreadCount || 0);
     } catch (err) {
@@ -223,18 +224,22 @@ const AdminNotificationPanel = () => {
           )}
         </div>
 
-        {notifications.map((n) => (
-          <div
-            key={n._id}
-            onClick={() => markAsRead(n._id)}
-            className={`p-2 mb-2 border rounded cursor-pointer ${
-              n.isRead ? "bg-gray-100" : "bg-white font-semibold"
-            }`}
-          >
-            <div>{n.title}</div>
-            <div className="text-xs">{n.message}</div>
+        {notifications.length > 0 && (
+          <div className="absolute right-0 top-10 w-64 bg-white dark:bg-gray-700 shadow-lg rounded-lg p-3 border border-gray-300 dark:border-gray-600 z-50 max-h-96 overflow-y-auto">
+            {notifications.map((n) => (
+              <div
+                key={n._id}
+                onClick={() => markAsRead(n._id)}
+                className={`p-2 mb-2 border rounded cursor-pointer ${
+                  n.isRead ? "bg-gray-100" : "bg-white font-semibold"
+                }`}
+              >
+                <div>{n.title}</div>
+                <div className="text-xs">{n.message}</div>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
