@@ -9,7 +9,7 @@ const AdminNotificationPanel = () => {
   const [form, setForm] = useState({
     title: "",
     message: "",
-    recipientRole: "all",
+    recipientRole: "ALL",
     recipientId: "",
   });
 
@@ -43,27 +43,22 @@ const AdminNotificationPanel = () => {
     fetchUsers();
   }, []);
 
-  // ================= SOCKET.IO (FIXED) =================
+  // ================= SOCKET.IO =================
   useEffect(() => {
     if (!currentUser) return;
 
-    // ✅ connect once
     socket.connect();
 
-    // ✅ register admin
     socket.emit("register-user", {
       userId: currentUser._id,
       role: currentUser.role,
     });
 
-    console.log("✅ Admin socket registered:", currentUser._id);
-
-    // ✅ listener
     const handleNotification = (notif) => {
       if (
-        notif.recipientType?.toLowerCase() === "admin" ||
-        notif.recipientType?.toLowerCase() === "all" ||
-        notif.recipientId === currentUser._id
+        notif.recipientType === "ADMIN" ||
+        notif.recipientType === "ALL" ||
+        notif.recipientId?.toString() === currentUser._id.toString()
       ) {
         setNotifications((prev) => [notif, ...prev]);
         setUnreadCount((prev) => prev + 1);
@@ -72,7 +67,6 @@ const AdminNotificationPanel = () => {
 
     socket.on("newNotification", handleNotification);
 
-    // cleanup only listener (NOT disconnect)
     return () => {
       socket.off("newNotification", handleNotification);
     };
@@ -84,9 +78,11 @@ const AdminNotificationPanel = () => {
 
     try {
       const res = await api.get("/notifications/admin?page=1&limit=50");
-      console.log(res.data.notifications);
-      setNotifications(res.data.notifications || []);
-      setUnreadCount(res.data.unreadCount || 0);
+
+      const notifs = res.data.notifications || [];
+
+      setNotifications(notifs);
+      setUnreadCount(notifs.filter((n) => !n.isRead).length);
     } catch (err) {
       console.error("Failed to fetch notifications:", err);
     }
@@ -108,21 +104,24 @@ const AdminNotificationPanel = () => {
       await api.post("/notifications", {
         title: form.title,
         message: form.message,
-        recipientRole: form.recipientRole,
-        recipientId: form.recipientId || null,
+        recipientRole:
+          form.recipientRole === "SINGLE" ? null : form.recipientRole,
+        recipientId: form.recipientRole === "SINGLE" ? form.recipientId : null,
       });
 
       setForm({
         title: "",
         message: "",
-        recipientRole: "all",
+        recipientRole: "ALL",
         recipientId: "",
       });
 
       fetchNotifications();
       alert("Notification sent successfully");
     } catch (err) {
-      console.error(err);
+      console.error("STATUS:", err.response?.status);
+      console.error("DATA:", err.response?.data);
+      console.error("FULL:", err);
       alert("Failed to send notification");
     }
   };
@@ -183,13 +182,13 @@ const AdminNotificationPanel = () => {
           onChange={handleChange}
           className="w-full border p-2 mb-2 rounded"
         >
-          <option value="all">All Users</option>
-          <option value="doctor">Doctors</option>
-          <option value="patient">Patients</option>
-          <option value="single">Specific User</option>
+          <option value="ALL">All Users</option>
+          <option value="DOCTOR">Doctors</option>
+          <option value="PATIENT">Patients</option>
+          <option value="SINGLE">Specific User</option>
         </select>
 
-        {form.recipientRole === "single" && (
+        {form.recipientRole === "SINGLE" && (
           <select
             name="recipientId"
             value={form.recipientId}
@@ -213,9 +212,11 @@ const AdminNotificationPanel = () => {
         </button>
       </div>
 
-      <div className="max-w-xl p-2 bg-white mt-4 shadow">
+      <div className="max-w-xl p-2 bg-white mt-4 shadow relative">
         <div className="flex justify-between mb-4">
-          <h2 className="font-bold">Notifications</h2>
+          <h2 className="font-bold">
+            Notifications {unreadCount > 0 && `(${unreadCount})`}
+          </h2>
 
           {unreadCount > 0 && (
             <button onClick={markAllAsRead} className="text-blue-600 text-sm">
@@ -224,22 +225,24 @@ const AdminNotificationPanel = () => {
           )}
         </div>
 
-        {notifications.length > 0 && (
-          <div className="absolute right-0 top-10 w-64 bg-white dark:bg-gray-700 shadow-lg rounded-lg p-3 border border-gray-300 dark:border-gray-600 z-50 max-h-96 overflow-y-auto">
-            {notifications.map((n) => (
-              <div
-                key={n._id}
-                onClick={() => markAsRead(n._id)}
-                className={`p-2 mb-2 border rounded cursor-pointer ${
-                  n.isRead ? "bg-gray-100" : "bg-white font-semibold"
-                }`}
-              >
-                <div>{n.title}</div>
-                <div className="text-xs">{n.message}</div>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="w-full bg-white shadow-lg rounded-lg p-3 border max-h-96 overflow-y-auto">
+          {notifications.length === 0 && (
+            <p className="text-sm text-gray-500">No notifications</p>
+          )}
+
+          {notifications.map((n) => (
+            <div
+              key={n._id}
+              onClick={() => markAsRead(n._id)}
+              className={`p-2 mb-2 border rounded cursor-pointer ${
+                n.isRead ? "bg-gray-100" : "bg-white font-semibold"
+              }`}
+            >
+              <div>{n.title}</div>
+              <div className="text-xs">{n.message}</div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
