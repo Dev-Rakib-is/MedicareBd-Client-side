@@ -6,16 +6,16 @@ import { motion } from "motion/react";
 import { useNotifications } from "../hooks/useNotifications";
 import { useVideoConsultation } from "../hooks/useVideoConsultation";
 import NotificationModal from "../components/commonComponent/NotificationModal";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const Navbar = ({ onHamburgerClick }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [popupNotif, setPopupNotif] = useState(null);
 
   // 🔔 Notification Hook
-  const { notifications, unreadCount, popupNotif, setPopupNotif } =
-    useNotifications();
+  const { notifications, unreadCount, markAsRead } = useNotifications();
 
   // 🎥 Video Consultation Hook
   const { activeAppointment, joinVideo } = useVideoConsultation();
@@ -33,6 +33,20 @@ const Navbar = ({ onHamburgerClick }) => {
           : "Guest");
 
   const settingPath = () => "/setting/account";
+
+  // Show popup for new notifications
+  useEffect(() => {
+    if (notifications.length === 0) return;
+
+    const latest = notifications[0];
+    if (!latest.isRead) {
+      setPopupNotif(latest);
+
+      // Auto hide popup after 4 seconds
+      const timer = setTimeout(() => setPopupNotif(null), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [notifications]);
 
   return (
     <>
@@ -106,6 +120,15 @@ const Navbar = ({ onHamburgerClick }) => {
                   <p className="text-[10px] text-gray-500 mt-1">
                     {new Date(popupNotif.createdAt).toLocaleTimeString()}
                   </p>
+                  <button
+                    onClick={() => {
+                      markAsRead(popupNotif._id, true);
+                      setPopupNotif(null);
+                    }}
+                    className="mt-2 px-2 py-1 bg-green-600 text-white text-xs rounded"
+                  >
+                    Mark Read
+                  </button>
                 </div>
               )}
             </div>

@@ -6,6 +6,7 @@ import {
   useCallback,
   useRef,
 } from "react";
+
 import api from "../api/api";
 import socket from "../utils/socket.js";
 
@@ -26,9 +27,9 @@ export const AuthProvider = ({ children }) => {
 
   const getToken = () => localStorage.getItem("token");
 
-  // ----------------------------
+  // ===============================
   // CHECK AUTH
-  // ----------------------------
+  // ===============================
   const checkAuth = useCallback(async () => {
     const token = getToken();
 
@@ -49,17 +50,17 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("user", JSON.stringify(data.user));
 
       if (data.user?._id && !socketRegistered.current) {
-        socket.emit("register-user", data.user._id);
+        socket.connect();
+        socket.emit("register-user", {
+          userId: data.user._id,
+          role: data.user.role,
+        });
+
         socketRegistered.current = true;
       }
     } catch (err) {
-      console.log("Auth check failed:", err?.response?.data || err.message);
-
-      // ❗ Token remove only if 401
       if (err?.response?.status === 401) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setUser(null);
+        logout();
       }
     } finally {
       setLoading(false);
@@ -70,104 +71,156 @@ export const AuthProvider = ({ children }) => {
     checkAuth();
   }, [checkAuth]);
 
-  // ----------------------------
+  // ===============================
   // SOCKET LISTENERS
-  // ----------------------------
+  // ===============================
   useEffect(() => {
-    socket.on("user-online", (data) => {
-      console.log(`User ${data.userId} is online`);
-    });
-
-    socket.on("user-offline", (data) => {
-      console.log(`User ${data.userId} is offline`);
+    socket.on("connect", () => {
+      console.log("Socket connected");
     });
 
     return () => {
-      socket.off("user-online");
-      socket.off("user-offline");
+      socket.off("connect");
     };
   }, []);
 
-  // LOGIN
-
+  // ===============================
+  // LOGIN (Password)
+  // ===============================
   const login = async ({ email, password, role }) => {
-    setLoading(true);
     try {
-      const { data } = await api.post("/auth/login", { email, password, role });
+      setLoading(true);
 
-      // Correct token saving
+      const { data } = await api.post("/auth/login", {
+        email,
+        password,
+        role,
+      });
+
       localStorage.setItem("token", data.accessToken);
       localStorage.setItem("refreshToken", data.refreshToken);
       localStorage.setItem("user", JSON.stringify(data.user));
+
       setUser(data.user);
 
       if (data.user?._id) {
-        socket.emit("register-user", data.user._id);
+        socket.connect();
+        socket.emit("register-user", {
+          userId: data.user._id,
+          role: data.user.role,
+        });
+
         socketRegistered.current = true;
       }
 
       return data;
-    } catch (error) {
-      throw error.response?.data || error.message;
     } finally {
       setLoading(false);
     }
   };
 
-  // REGISTER PATIENT
+  // ===============================
+  // OTP LOGIN
+  // ===============================
 
-  const registerPatient = async (patientData) => {
-    setLoading(true);
+  const sendOtp = async ({ phone, role }) => {
     try {
+      setLoading(true);
+
+      const { data } = await api.post("/auth/send-otp", {
+        phone,
+        role,
+      });
+
+      return data;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const verifyOtp = async ({ phone, otp, role }) => {
+    try {
+      setLoading(true);
+
+      const { data } = await api.post("/auth/verify-otp", {
+        phone,
+        otp,
+        role,
+      });
+
+      localStorage.setItem("token", data.accessToken);
+      localStorage.setItem("refreshToken", data.refreshToken);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      setUser(data.user);
+
+      if (data.user?._id) {
+        socket.connect();
+        socket.emit("register-user", {
+          userId: data.user._id,
+          role: data.user.role,
+        });
+
+        socketRegistered.current = true;
+      }
+
+      return data;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ===============================
+  // REGISTER PATIENT
+  // ===============================
+  const registerPatient = async (patientData) => {
+    try {
+      setLoading(true);
+
       const { data } = await api.post("/auth/register/patient", patientData);
 
-      localStorage.setItem("token", data.token);
+      localStorage.setItem("token", data.accessToken);
+      localStorage.setItem("refreshToken", data.refreshToken);
       localStorage.setItem("user", JSON.stringify(data.user));
+
       setUser(data.user);
 
-      if (data.user?._id) {
-        socket.emit("register-user", data.user._id);
-        socketRegistered.current = true;
-      }
-
       return data;
-    } catch (error) {
-      throw error.response?.data || error.message;
     } finally {
       setLoading(false);
     }
   };
 
+  // ===============================
   // REGISTER DOCTOR
-
+  // ===============================
   const registerDoctor = async (doctorData) => {
-    setLoading(true);
     try {
+      setLoading(true);
+
       const { data } = await api.post("/auth/register/doctor", doctorData);
 
-      localStorage.setItem("token", data.token);
+      localStorage.setItem("token", data.accessToken);
+      localStorage.setItem("refreshToken", data.refreshToken);
       localStorage.setItem("user", JSON.stringify(data.user));
+
       setUser(data.user);
 
-      if (data.user?._id) {
-        socket.emit("register-user", data.user._id);
-        socketRegistered.current = true;
-      }
-
       return data;
-    } catch (error) {
-      throw error.response?.data || error.message;
     } finally {
       setLoading(false);
     }
   };
 
+  // ===============================
   // LOGOUT
-
+  // ===============================
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("user");
+
     localStorage.removeItem("token");
+    localStorage.removeItem("refreshToken");
+    localStorage.removeItem("user");
 
     socketRegistered.current = false;
     socket.disconnect();
@@ -179,6 +232,8 @@ export const AuthProvider = ({ children }) => {
         user,
         loading,
         login,
+        sendOtp,
+        verifyOtp,
         registerPatient,
         registerDoctor,
         logout,

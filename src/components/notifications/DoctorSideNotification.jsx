@@ -14,7 +14,9 @@ const DoctorSideNotification = () => {
     try {
       setLoading(true);
       const res = await api.get("/notifications");
-      setNotifications(res.data?.notifications || []);
+
+      const notifs = res.data?.notifications || [];
+      setNotifications(notifs);
     } catch (err) {
       console.error(err);
       setError("Failed to load notifications");
@@ -38,25 +40,27 @@ const DoctorSideNotification = () => {
 
     if (userId) {
       socket.emit("register-user", { userId, role });
-      console.log("Socket registered:", userId);
     }
 
     socket.on("newNotification", (notif) => {
       if (
-        notif.recipientType?.toUpperCase() === role ||
-        notif.recipientType?.toUpperCase() === "ALL" ||
-        notif.recipientId === userId
+        notif.recipientType === role ||
+        notif.recipientType === "ALL" ||
+        notif.recipientId?.toString() === userId?.toString()
       ) {
         setNotifications((prev) => [notif, ...prev]);
       }
     });
 
-    return () => socket.disconnect();
+    return () => {
+      socket.disconnect();
+    };
   }, [socketUrl]);
 
   const markAsRead = async (id) => {
     try {
       await api.patch(`/notifications/read/${id}`);
+
       setNotifications((prev) =>
         prev.map((n) => (n._id === id ? { ...n, isRead: true } : n)),
       );

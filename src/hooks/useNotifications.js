@@ -12,12 +12,12 @@ export function useNotifications() {
   const [total, setTotal] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Fetch Notifications – শুধু টোকেন থাকলে
+  // Fetch Notifications
   const fetchNotifications = async () => {
     const token = localStorage.getItem("token");
     if (!token) {
       setLoading(false);
-      return; // লগইন না থাকলে কল করবে না
+      return;
     }
 
     try {
@@ -30,7 +30,7 @@ export function useNotifications() {
       setNotifications(list);
       setTotal(res.data.total || 0);
 
-      const unread = list.filter((n) => !n.read).length;
+      const unread = list.filter((n) => !n.isRead).length; 
       setUnreadCount(unread);
     } catch (err) {
       setError(err.message || "Failed to load notifications");
@@ -39,36 +39,34 @@ export function useNotifications() {
     }
   };
 
-  // Mark notification as read/unread
-  const markAsRead = async (id, read) => {
+  // Mark notification as read
+  const markAsRead = async (id) => {
     try {
-      await api.patch(`/notifications/${id}`, { read });
+      await api.patch(`/notifications/read/${id}`); 
       setNotifications((prev) =>
-        prev.map((n) => (n._id === id ? { ...n, read } : n)),
+        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n))
       );
-      setUnreadCount((prev) => (read ? prev - 1 : prev + 1));
+      setUnreadCount((prev) => Math.max(prev - 1, 0));
     } catch (err) {
       console.error(err);
     }
   };
 
-  // Setup socket connection & real-time updates
+  // Socket real-time
   useEffect(() => {
     fetchNotifications();
 
-    if (!socket.connected) {
-      socket.connect();
-    }
+    if (!socket.connected) socket.connect();
 
     const handleNewNotification = (notif) => {
       setNotifications((prev) => [notif, ...prev]);
-      if (!notif.read) setUnreadCount((prev) => prev + 1);
+      if (!notif.isRead) setUnreadCount((prev) => prev + 1); 
     };
 
-    socket.on("new-notification", handleNewNotification);
+    socket.on("newNotification", handleNewNotification); 
 
     return () => {
-      socket.off("new-notification", handleNewNotification);
+      socket.off("newNotification", handleNewNotification);
     };
   }, [page, search]);
 

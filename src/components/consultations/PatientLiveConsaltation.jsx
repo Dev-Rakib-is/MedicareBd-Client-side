@@ -17,29 +17,40 @@ const PatientLiveConsultation = ({
   const remoteVideoRef = useRef(null);
   const clientRef = useRef(null);
   const tracksRef = useRef([]);
+
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
-  const [status, setStatus] = useState("waiting"); // waiting | connecting | connected
+
+  const [status, setStatus] = useState("idle");
+  // idle | connecting | waiting | connected | error
 
   const channelName = appointmentId ? `consult_${appointmentId}` : null;
 
   useEffect(() => {
     if (!channelName) return;
 
+    let timeoutId;
+
     const startCall = async () => {
       try {
-        // 1️⃣ Permission check
-        await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        setStatus("connecting");
+
+        await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: true,
+        });
 
         await api.post("/consultations/start", { appointmentId });
-
-        setStatus("connecting");
 
         const client = createClient();
         clientRef.current = client;
 
         const uid = Math.floor(Math.random() * 100000);
-        const { data } = await api.post("/agora/token", { channelName, uid });
+
+        const { data } = await api.post("/agora/token", {
+          channelName,
+          uid,
+        });
 
         await client.join(APP_ID, channelName, data.token, uid);
 
@@ -49,33 +60,56 @@ const PatientLiveConsultation = ({
         tracks[1].play(localVideoRef.current);
         await client.publish(tracks);
 
+        setStatus("waiting");
+
         client.on("user-published", async (user, mediaType) => {
           await client.subscribe(user, mediaType);
-          if (mediaType === "video")
+
+          if (mediaType === "video") {
             user.videoTrack.play(remoteVideoRef.current);
-          if (mediaType === "audio") user.audioTrack.play();
+            setStatus("connected");
+            clearTimeout(timeoutId);
+          }
+
+          if (mediaType === "audio") {
+            user.audioTrack.play();
+          }
         });
 
-        setStatus("connected");
+        // Connection timeout UX
+        timeoutId = setTimeout(() => {
+          if (status !== "connected") {
+            Swal.fire({
+              icon: "info",
+              title: "Waiting for doctor",
+              text: "Doctor has not joined yet.",
+            });
+          }
+        }, 30000);
       } catch (err) {
         console.error(err);
+        setStatus("error");
+
         Swal.fire({
           icon: "error",
-          title: "Permission Denied",
-          text: "Microphone or Camera access denied. Please allow permissions.",
+          title: "Connection Failed",
+          text: "Please check camera/microphone permission",
         });
-        setStatus("waiting");
       }
     };
 
     startCall();
 
-    return () => leaveCall(clientRef.current, tracksRef.current);
-  }, [channelName]);
+    return () => {
+      clearTimeout(timeoutId);
+      leaveCall(clientRef.current, tracksRef.current);
+    };
+  }, [channelName, appointmentId]);
 
   const toggleMic = async () => {
     const mic = tracksRef.current[0];
     if (!mic) return;
+
     await mic.setEnabled(!micOn);
     setMicOn(!micOn);
   };
@@ -83,6 +117,7 @@ const PatientLiveConsultation = ({
   const toggleCam = async () => {
     const cam = tracksRef.current[1];
     if (!cam) return;
+
     await cam.setEnabled(!camOn);
     setCamOn(!camOn);
   };
@@ -90,25 +125,43 @@ const PatientLiveConsultation = ({
   const handleEndCall = async () => {
     const result = await Swal.fire({
       title: "End Consultation?",
-      text: "Are you sure you want to end this consultation?",
       icon: "warning",
       showCancelButton: true,
       confirmButtonText: "Yes, End",
-      cancelButtonText: "Cancel",
     });
 
-    if (result.isConfirmed) {
-      await leaveCall(clientRef.current, tracksRef.current);
-      await api.post("/consultations/end", { appointmentId });
-      Swal.fire({
-        icon: "success",
-        title: "Consultation Ended",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      onEndCall?.();
-    }
+    if (!result.isConfirmed) return;
+
+    await leaveCall(clientRef.current, tracksRef.current);
+    await api.post("/consultations/end", { appointmentId });
+
+    Swal.fire({
+      icon: "success",
+      title: "Consultation Ended",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+
+    onEndCall?.();
   };
+
+  /* ================= UI STATES ================= */
+
+  if (!appointmentId) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-900 text-white">
+        Invalid Appointment
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-900 text-white">
+        Connection Error. Try again later.
+      </div>
+    );
+  }
 
   return (
     <div className="relative h-screen bg-gray-900 text-white flex flex-col mt-16">
@@ -116,28 +169,24 @@ const PatientLiveConsultation = ({
         Live Consultation with {doctorName}
       </div>
 
-      <div className="flex-1 relative">
-        <div ref={remoteVideoRef} className="w-full h-full bg-black" />
+      <div className="flex-1 relative bg-black">
+        <div ref={remoteVideoRef} className="w-full h-full" />
 
-        <div className="absolute bottom-6 right-6 w-40 h-32 rounded-xl overflow-hidden border-2 border-white/30 bg-black">
+        {status === "waiting" && (
+          <div className="absolute inset-0 flex items-center justify-center text-lg">
+            Waiting for doctor to join...
+          </div>
+        )}
+
+        <div className="absolute bottom-6 right-6 w-40 h-32 rounded-xl overflow-hidden border border-white/30 bg-black">
           <div ref={localVideoRef} className="w-full h-full" />
+
           {!camOn && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/70 text-sm">
               Camera Off
             </div>
           )}
         </div>
-
-        {status === "waiting" && (
-          <div className="absolute inset-0 flex items-center justify-center text-lg">
-            Waiting for doctor...
-          </div>
-        )}
-        {status === "connecting" && (
-          <div className="absolute inset-0 flex items-center justify-center text-lg">
-            Connecting...
-          </div>
-        )}
       </div>
 
       <div className="p-4 flex justify-center gap-4 bg-gray-800">
@@ -149,6 +198,7 @@ const PatientLiveConsultation = ({
         >
           Mic
         </button>
+
         <button
           onClick={toggleCam}
           className={`px-4 py-2 rounded ${
@@ -157,6 +207,7 @@ const PatientLiveConsultation = ({
         >
           Cam
         </button>
+
         <button
           onClick={handleEndCall}
           className="px-4 py-2 rounded bg-red-700"
